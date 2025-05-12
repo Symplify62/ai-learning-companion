@@ -4,8 +4,9 @@ from sqlalchemy.orm import Session
 from sqlalchemy import text
 
 from app.api.v1.endpoints import learning_sessions
-from app.db.database import get_db
+from app.db.database import get_db, engine
 from app.db.init_db import init_db
+from app.db.models import Base
 
 app = FastAPI(
     title="AI Learning Companion System",
@@ -53,9 +54,18 @@ def test_db_connection(db: Session = Depends(get_db)):
     except Exception as e:
         return {"status": "error", "message": f"数据库连接失败: {str(e)}"}
 
-# 应用程序启动事件
+def create_db_tables():
+    """
+    检查并创建所有数据库表（如不存在）。
+    """
+    print("Attempting to create database tables if they don't exist...")
+    try:
+        Base.metadata.create_all(bind=engine)
+        print("Database tables checked/created successfully.")
+    except Exception as e:
+        print(f"Error creating database tables: {e}")
+
+# 注册启动事件，确保数据库表创建
 @app.on_event("startup")
-def startup_db_client():
-    """应用程序启动时的事件处理函数"""
-    # 初始化数据库（创建表）
-    init_db()
+async def on_startup():
+    create_db_tables()
