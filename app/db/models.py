@@ -26,7 +26,7 @@ class LearningSession(Base):
     session_id = Column(String(36), primary_key=True, index=True, default=generate_uuid)
     status = Column(String(50), nullable=False)
     user_id = Column(String(36), nullable=True, index=True)
-    created_at = Column(String(50), default=lambda: datetime.datetime.now().isoformat())
+    created_at = Column(DateTime, default=func.now(), nullable=False)
     
     # 关系：一个会话可以有多个学习资源
     sources = relationship("LearningSource", back_populates="session")
@@ -54,6 +54,7 @@ class LearningSource(Base):
     total_duration_seconds = Column(Float, nullable=True)
     structured_transcript_segments_json = Column(LONGTEXT, nullable=True)
     extracted_key_information_json = Column(LONGTEXT, nullable=True)
+    created_at = Column(DateTime, default=func.now(), nullable=False)
     
     # 关系：多个学习资源关联到一个会话
     session = relationship("LearningSession", back_populates="sources")
@@ -79,7 +80,7 @@ class GeneratedNote(Base):
     markdown_content = Column(LONGTEXT, nullable=False)
     is_user_edited = Column(Boolean, nullable=False, default=False)
     version = Column(String(10), nullable=False, default="1.0.0")
-    created_at = Column(String(50), default=lambda: datetime.datetime.now().isoformat())
+    created_at = Column(DateTime, default=func.now(), nullable=False)
     last_modified_at = Column(String(50), default=lambda: datetime.datetime.now().isoformat())
     estimated_reading_time_seconds = Column(Integer, nullable=True)
     key_concepts_mentioned = Column(JSON, nullable=True)
@@ -116,7 +117,7 @@ class KnowledgeCue(Base):
     note = relationship("GeneratedNote", back_populates="knowledge_cues")
     
     # 元数据
-    created_at = Column(String(50), default=lambda: datetime.datetime.now().isoformat())
+    created_at = Column(DateTime, default=func.now(), nullable=False)
     last_modified_at = Column(String(50), default=lambda: datetime.datetime.now().isoformat())
     
     def __repr__(self):
