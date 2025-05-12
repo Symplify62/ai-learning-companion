@@ -1,7 +1,7 @@
 # AI学习陪伴系统 - 技术参考与排错指南 (Technical Reference & Troubleshooting Guide)
 
-**文档版本：** 1.0 (整合版)
-**基于状态：** 迭代一核心功能完成 (截至 2024年5月12日)
+**文档版本：** 1.1 (整合版)
+**基于状态：** 迭代一核心功能完成并优化部署 (截至 2024年5月15日)
 **核心贡献者：** Alec (项目发起人/核心用户), ADC v1.3 (前任), ADC v1.4 (现任)
 **目标读者：** AI开发协调员 (ADC), 技术开发者
 
@@ -9,7 +9,7 @@
 
 ## 1. 引言与文档目的
 
-本文档旨在为“AI学习陪伴系统”项目提供一份详尽的技术参考和问题排查指南。它深入介绍了项目的技术架构、代码结构、核心模块实现细节以及在开发和运行过程中可能遇到的常见问题及其定位和解决策略。
+本文档旨在为"AI学习陪伴系统"项目提供一份详尽的技术参考和问题排查指南。它深入介绍了项目的技术架构、代码结构、核心模块实现细节以及在开发和运行过程中可能遇到的常见问题及其定位和解决策略。
 
 本文档的目标是帮助技术参与者（特别是新任ADC）快速理解系统的技术实现，能够有效地进行后续开发、维护和问题排查。它整合了迭代一完成后的最新技术状态和调试经验。
 
@@ -20,7 +20,7 @@
 *   **后端 (Backend):**
     *   **框架:** Python 3.12, FastAPI
     *   **ORM & 数据校验:** SQLAlchemy, Pydantic
-    *   **数据库:** OceanBase (通过标准MySQL连接器访问)
+    *   **数据库:** PostgreSQL (生产环境), OceanBase/MySQL (开发环境可选)
     *   **数据库连接池:** SQLAlchemy Engine 配置 `pool_pre_ping=True`, `pool_recycle=1800`
     *   **异步处理:** FastAPI `BackgroundTasks`, `asyncio` (包括 `asyncio.to_thread` 用于包装同步IO密集型任务如ASR)
 *   **前端 (Frontend):**
@@ -35,6 +35,9 @@
 *   **配置管理:**
     *   后端: `.env` 文件 + Pydantic `Settings` (`app/core/config.py`)
     *   前端: `frontend_web/.env` 文件 + Vite环境变量 (`import.meta.env`)
+*   **部署:**
+    *   **容器化:** Docker 多阶段构建 (python:3.12-slim)
+    *   **应用服务器:** Uvicorn (通过 `python -m uvicorn` 启动，增强启动日志)
 
 ---
 
@@ -64,18 +67,27 @@
 *   **ImportError (Python)**:
     *   **根源**: 模块导入路径错误，循环导入。
     *   **排查**: 检查FastAPI启动时的 `ImportError` 堆栈跟踪。确认 `get_settings()` 使用方式正确（替换旧的全局 `settings` 导入）。
+*   **Docker部署问题**:
+    *   **根源**: Dockerfile 配置错误；环境变量未正确传递；容器内外网络配置不匹配。
+    *   **排查**: 查看Docker构建和运行日志；使用 `--log-level debug` 增强Uvicorn日志；在关键文件开头添加调试 `print`。
+*   **数据库兼容性问题**:
+    *   **根源**: 数据库方言不兼容（如MySQL特有类型用于PostgreSQL）；连接字符串格式错误。
+    *   **排查**: 检查 SQLAlchemy 模型类型；确保使用通用类型（如 `Text` 而非 `LONGTEXT`）；验证连接字符串格式。
 ---
 
 ### 3.2. 后端结构详解 (`app/`)
 
 #### 3.2.1. `app/main.py`
-*   **职责**: FastAPI应用入口点。初始化FastAPI实例，挂载API路由器 (`app.api.v1.api.api_router`)。
-*   **状态**: 稳定可用。
+*   **职责**: FastAPI应用入口点。初始化FastAPI实例，挂载API路由器 (`app.api.v1.api.api_router`)。配置启动事件用于自动创建数据库表。
+*   **状态**: 稳定可用，增强了错误处理和启动日志。
 ---
 **问题排查与优化指引 (`app/main.py`)：**
 *   **应用无法启动**:
-    *   **根源**: 路由器挂载错误、全局依赖问题。
-    *   **排查**: 查看uvicorn启动时的终端错误输出。
+    *   **根源**: 路由器挂载错误、全局依赖问题、数据库连接失败、表创建错误。
+    *   **排查**: 查看uvicorn启动时的终端错误输出（设置 `--log-level debug`）；检查文件开头的诊断 `print` 输出；查看 `on_startup` 和 `create_db_tables` 函数的错误处理日志。
+*   **数据库表自动创建失败**:
+    *   **根源**: 数据库连接问题；SQLAlchemy模型与数据库方言不匹配；权限不足。
+    *   **排查**: 检查 `on_startup` 事件中 `create_db_tables` 的错误日志；验证 `DATABASE_URL` 格式和凭证；确认模型使用了与数据库兼容的类型。
 ---
 
 #### 3.2.2. `app/core/` (核心配置与工具)
@@ -139,7 +151,7 @@
     *   **B站视频处理流程**: `yt-dlp` 下载 -> `audio_processor.prepare_audio_for_asr` -> 解耦的ASR服务 -> **ASR结果直接适配为A.1输入格式**。
     *   **AI模块链调用**: 串行异步调用A.1, A.2, B, D。结果通过局部会话CRUD持久化。
     *   **错误处理**: 主 `try...except` 捕获异常并记录错误状态。
-    *   **临时文件管理**: 使用 `tempfile.mkdtemp()`，`finally` 中清理。
+    *   **临时文件管理**: 使用 `tempfile.mkdtemp()`, `finally` 中清理。
 *   **状态**: 已完成核心重构、优化，并通过端到端测试验证。**文件较大，未来可拆分。**
 ---
 **问题排查与优化指引 (`app/services/orchestration.py`)：**
@@ -157,7 +169,7 @@
 *   **`module_*_llm_caller.py`**: 封装调用Google Gemini API逻辑。
     *   接受 `settings: Settings` 获取 `GOOGLE_API_KEY`。
     *   **`module_b_llm_caller.py`**: 含LLM响应JSON必需字段校验。
-    *   `module_d_llm_caller.py`: `temperature=0.75`，处理可变数量和难度。
+    *   `module_d_llm_caller.py`: `temperature=0.75`, 处理可变数量和难度。
 *   **状态**: Prompts已优化验证，调用器工作正常。
 ---
 **问题排查与优化指引 (`app/ai_modules/`)：**
@@ -173,17 +185,17 @@
 *   **`models.py` (SQLAlchemy ORM模型)**:
     *   定义 `LearningSession`, `LearningSource`, `GeneratedNote`, `KnowledgeCue` 等。
     *   `LearningSession.status` (`String(50)`)。
-    *   `LearningSource.structured_transcript_segments_json`, `GeneratedNote.markdown_content` (`LONGTEXT`)。
+    *   **对于大文本/JSON字段使用通用 `Text` 类型（已从MySQL特有的 `LONGTEXT` 迁移）。**
     *   `LearningSource.video_title_ai` (或 `video_title`)。
     *   `relationship` 定义。
-    *   **状态**: 稳定可用。
+    *   **状态**: 已优化为PostgreSQL兼容，稳定可用。
 *   **`crud.py` (数据访问操作)**:
     *   实现CRUD。
     *   `create_learning_session`, `update_learning_session_status` 接受 `ProcessingStatus` 枚举。
     *   新增 `get_learning_source_by_video_id`。
     *   **状态**: 已更新并稳定运作。
 *   **`database.py` (数据库引擎与会话工厂)**:
-    *   构建 `SQLALCHEMY_DATABASE_URL`。
+    *   **使用单一 `DATABASE_URL` 环境变量构建连接字符串。**
     *   `engine` 配置 `pool_pre_ping=True`, `pool_recycle=1800`。
     *   `SessionLocal` (`sessionmaker`) 定义。
     *   **状态**: 已优化并验证。
@@ -191,11 +203,14 @@
 ---
 **问题排查与优化指引 (`app/db/`)：**
 *   **数据库操作错误/数据不一致**:
-    *   **根源**: ORM模型与表结构不符；CRUD逻辑错误；数据库连接URL错误；**（已重点优化）连接失效**；事务管理不当 (当前由`orchestration.py`局部会话管理)。
-    *   **排查**: 检查SQLAlchemy错误日志；确认DB URL和凭证；验证 `orchestration.py` 局部会话管理模式实现。
+    *   **根源**: ORM模型与表结构不符；CRUD逻辑错误；数据库连接URL错误；**（已重点优化）连接失效**；事务管理不当 (当前由`orchestration.py`局部会话管理)；**数据库方言不兼容问题（如MySQL特有类型）**。
+    *   **排查**: 检查SQLAlchemy错误日志；确认DB URL和凭证；验证 `orchestration.py` 局部会话管理模式实现；**确保模型使用通用SQL类型，避免数据库特定类型**。
 *   **数据库性能问题**:
     *   **关注点**: 查询效率 (索引缺失/复杂JOIN)；大量数据写入/更新。
     *   **优化**: 添加索引；优化查询；分批处理。
+*   **数据库表创建/迁移问题**:
+    *   **根源**: 自动表创建失败；字段类型不兼容；缺少表创建权限。
+    *   **排查**: 检查 `app/main.py` 中的表创建日志；验证 `Base.metadata.create_all` 是否被正确调用；确认数据库用户权限。
 ---
 
 #### 3.2.7. `app/models/data_models.py` (Pydantic数据模型 - 已更新)
@@ -320,12 +335,98 @@
 
 ## 5. 通用问题排查策略 (总结)
 
-1.  **从日志入手**: 后端 (Uvicorn/FastAPI/SQLAlchemy/自定义日志) + 前端 (浏览器DevTools Console/Network)。
-2.  **明确问题范围**: 前端UI vs API调用? 后端API vs 后台服务? DB vs AI模块? 配置 vs 代码依赖? **关注新增/重构模块** (ASR抽象层, 状态枚举, `orchestration.py` 局部会话)。
-3.  **复现问题**: 最小复现步骤。使用 `curl`/Postman 测试后端API。
-4.  **检查配置与导入 (关键)**: 后端 `.env` (DB, Keys, 讯飞凭证)；前端 `.env` (`VITE_API_BASE_URL`)；`config.py` (`Settings` 模型)；Python导入路径。
-5.  **理解数据流与依赖关系 (关键)**: 掌握上述核心数据流，理解各模块输入输出和状态转换。
+1.  **从日志入手**: 
+    * **后端**: Uvicorn日志 (`--log-level debug`)、FastAPI错误、SQLAlchemy异常、自定义 `print` 和 `traceback`
+    * **前端**: 浏览器DevTools (Console/Network)
+    * **容器**: Docker构建和运行日志、容器内应用日志
+
+2.  **明确问题范围**: 
+    * 前端UI vs API调用? 
+    * 后端API vs 后台服务? 
+    * DB vs AI模块? 
+    * 配置 vs 代码依赖? 
+    * 本地环境 vs 容器部署?
+    * **关注重点维护区域**: ASR抽象层、数据库兼容性、状态枚举、`orchestration.py` 局部会话、Docker容器设置
+
+3.  **排查环境与配置问题**:
+    * **后端配置**: `.env` 文件 (DB连接、API密钥、ASR凭证)
+    * **前端配置**: `frontend_web/.env` (`VITE_API_BASE_URL`)
+    * **数据库连接**: PostgreSQL与MySQL连接字符串格式、兼容性、表自动创建
+    * **容器配置**: 环境变量传递、网络设置、存储卷挂载
+
+4.  **数据库兼容性检查**:
+    * 确保SQLAlchemy模型使用通用类型 (`Text` 替代 `LONGTEXT`)
+    * 验证数据库操作没有使用特定数据库方言功能
+    * 检查表创建权限和过程
+
+5.  **应用启动问题排查**:
+    * 在核心文件开头添加 `print` 语句确认解释器读取流程
+    * 提高Uvicorn日志级别 (`--log-level debug`)
+    * 检查启动事件和表创建过程的异常处理
+
+6.  **快速诊断方法**:
+    * 使用 `/db-test` API快速检查数据库连接
+    * 尝试 `python -m uvicorn` 替代直接 `uvicorn` 命令
+    * 利用 `traceback.print_exc()` 获取详细堆栈信息
+    * 临时修改 Dockerfile CMD 或编写简单的调试脚本在容器内运行
 
 ---
 
-本文档提供了截至迭代一完成时的详细技术参考和排错指南。随着项目的演进，应持续更新本文档以反映最新的技术状态。
+本文档提供了截至迭代一完成和优化部署后的详细技术参考和排错指南。随着项目的演进，应持续更新本文档以反映最新的技术状态和问题排查经验。
+
+### 3.4. Docker部署 (新增)
+
+#### 3.4.1. `Dockerfile` (多阶段构建)
+*   **职责**: 定义容器化应用的构建和运行环境。
+*   **构建阶段 (builder)**:
+    *   基于 `python:3.12-slim`。
+    *   安装 `ffmpeg` 和依赖。
+    *   安装 Python 依赖和 `yt-dlp`。
+*   **最终阶段 (final)**:
+    *   从构建阶段复制 Python 环境和 `yt-dlp`。
+    *   复制应用代码 (`app` 目录)。
+    *   配置启动命令: `python -m uvicorn app.main:app --host 0.0.0.0 --port 8000 --log-level debug`。
+*   **状态**: 稳定可用，已优化启动日志级别。
+---
+**问题排查与优化指引 (`Dockerfile`)：**
+*   **构建失败**:
+    *   **根源**: 依赖安装错误；系统依赖缺失；复制命令错误。
+    *   **排查**: 查看 Docker 构建日志；确认 `apt-get` 和 `pip` 命令正确；验证文件路径。
+*   **启动失败/静默失败**:
+    *   **根源**: 环境变量缺失；数据库连接问题；应用代码错误；uvicorn 命令参数错误。
+    *   **排查**: 使用 `--log-level debug` 提高日志级别；通过 `print` 语句在关键点添加调试输出；确认环境变量正确传递；尝试 `python -m uvicorn` 替代直接 `uvicorn` 命令。
+*   **容器内外部通信问题**:
+    *   **根源**: 端口映射错误；网络配置不当；跨容器通信问题。
+    *   **排查**: 确认端口映射 (`-p 8000:8000`)；检查 API Base URL 配置；验证容器网络设置。
+---
+
+### 3.5. 环境变量与配置 (新增)
+
+#### 3.5.1. 后端环境变量 (`.env`)
+*   **职责**: 配置后端应用的关键参数。
+*   **核心变量**:
+    *   `DATABASE_URL`: 数据库连接字符串 (如 `postgresql://user:pass@host:port/dbname`)。
+    *   `GOOGLE_API_KEY`: Google Gemini API 密钥。
+    *   `XUNFEI_APPID`/`XUNFEI_SECRET_KEY`: 讯飞 ASR 服务凭证。
+*   **状态**: 必须正确配置才能运行。
+---
+**问题排查与优化指引 (`.env`)：**
+*   **配置加载失败**:
+    *   **根源**: 文件不存在；格式错误；变量名不匹配；路径问题。
+    *   **排查**: 确认 `.env` 文件存在且格式正确；验证变量名与 `app/core/config.py` 中 `Settings` 模型匹配；检查日志中的配置错误。
+*   **数据库连接失败**:
+    *   **根源**: `DATABASE_URL` 格式错误；凭证无效；数据库不可访问；PostgreSQL/MySQL 连接字符串格式不同。
+    *   **排查**: 验证连接字符串格式是否正确（对应目标数据库类型）；确认数据库服务运行；测试连接（如使用 `app/main.py` 中的 `/db-test` API）。
+---
+
+#### 3.5.2. 前端环境变量 (`frontend_web/.env`)
+*   **职责**: 配置前端应用的连接参数。
+*   **核心变量**:
+    *   `VITE_API_BASE_URL`: 指向后端 API 的 URL (如 `http://localhost:8000/api/v1`)。
+*   **状态**: 必须正确配置并重启 Vite 服务器。
+---
+**问题排查与优化指引 (`frontend_web/.env`)：**
+*   **API 连接失败**:
+    *   **根源**: URL 格式错误；后端服务不可用；CORS 问题；未重启 Vite。
+    *   **排查**: 确认 URL 格式和可访问性；验证后端服务运行；检查浏览器控制台网络和错误日志；**修改后重启 Vite 服务器**。
+---
