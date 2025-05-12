@@ -5,9 +5,8 @@
 """
 import uuid
 import datetime
-from sqlalchemy import Column, String, Text, Float, Boolean, Integer, ForeignKey, DateTime, func
+from sqlalchemy import Column, String, Text, Float, Boolean, Integer, ForeignKey, DateTime, func, JSON
 from sqlalchemy.orm import relationship
-from sqlalchemy.dialects.mysql import JSON, LONGTEXT
 
 from app.db.database import Base
 
@@ -52,8 +51,8 @@ class LearningSource(Base):
     video_description = Column(Text, nullable=True)
     source_description = Column(Text, nullable=True)
     total_duration_seconds = Column(Float, nullable=True)
-    structured_transcript_segments_json = Column(LONGTEXT, nullable=True)
-    extracted_key_information_json = Column(LONGTEXT, nullable=True)
+    structured_transcript_segments_json = Column(Text, nullable=True)
+    extracted_key_information_json = Column(Text, nullable=True)
     created_at = Column(DateTime, default=func.now(), nullable=False)
     
     # 关系：多个学习资源关联到一个会话
@@ -77,7 +76,7 @@ class GeneratedNote(Base):
     video_id = Column(String(36), ForeignKey("learning_sources.video_id"), nullable=False, index=True)
     session_id = Column(String(36), ForeignKey("learning_sessions.session_id"), nullable=False, index=True)
     user_id = Column(String(36), nullable=True, index=True)
-    markdown_content = Column(LONGTEXT, nullable=False)
+    markdown_content = Column(Text, nullable=False)
     is_user_edited = Column(Boolean, nullable=False, default=False)
     version = Column(String(10), nullable=False, default="1.0.0")
     created_at = Column(DateTime, default=func.now(), nullable=False)
