@@ -2,6 +2,7 @@ from fastapi import FastAPI, Depends
 from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy.orm import Session
 from sqlalchemy import text
+import traceback
 
 from app.api.v1.endpoints import learning_sessions
 from app.db.database import get_db, engine
@@ -68,4 +69,7 @@ def create_db_tables():
 # 注册启动事件，确保数据库表创建
 @app.on_event("startup")
 async def on_startup():
-    create_db_tables()
+    try:
+        create_db_tables()
+    except Exception as e:
+        print(f"Error during startup: {traceback.format_exc()}")
