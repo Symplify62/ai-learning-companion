@@ -1,4 +1,3 @@
-print("--- Python interpreter is reading app/main.py ---")
 # ===============================
 # Stage 1: Builder
 # ===============================
