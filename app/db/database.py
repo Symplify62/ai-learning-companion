@@ -14,15 +14,12 @@ from app.core.config import get_settings, Settings
 # Get settings instance
 current_settings: Settings = get_settings()
 
-# 构建MySQL/OceanBase数据库连接URL
-SQLALCHEMY_DATABASE_URL = f"mysql+mysqlconnector://{current_settings.DB_USER}:{current_settings.DB_PASSWORD.get_secret_value()}@{current_settings.DB_HOST}:{current_settings.DB_PORT}/{current_settings.DB_NAME}"
-
-# 创建MySQL引擎
+# 直接使用DATABASE_URL创建引擎
 engine = create_engine(
-    SQLALCHEMY_DATABASE_URL,
+    current_settings.DATABASE_URL,
     echo=False,  # 设置为True可打印SQL语句（调试用）
     pool_pre_ping=True,
-    pool_recycle=1800  # 每小时回收一次连接 (3600秒) -> Changed to 30 minutes (1800 seconds)
+    pool_recycle=1800  # 每30分钟回收一次连接
 )
 
 # 创建会话工厂

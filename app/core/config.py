@@ -17,21 +17,13 @@ class Settings(BaseSettings):
     """
      应用程序设置类
      
-     @param DB_HOST 数据库主机（OceanBase/MySQL）
-     @param DB_PORT 数据库端口
-     @param DB_USER 数据库用户名
-     @param DB_PASSWORD 数据库密码（使用SecretStr保护）
-     @param DB_NAME 数据库名称
+     @param DATABASE_URL 数据库连接字符串（PostgreSQL/其他，替代原有分字段）
      @param GOOGLE_API_KEY 用于Gemini API的API密钥（使用SecretStr保护）
      @param XUNFEI_APPID 讯飞开放平台语音识别API凭证 (可选)
      @param XUNFEI_SECRET_KEY 讯飞开放平台语音识别API凭证 (可选)
     """
-    # 数据库连接设置（全部为必填项）
-    DB_HOST: str
-    DB_PORT: int
-    DB_USER: str
-    DB_PASSWORD: SecretStr
-    DB_NAME: str
+    # 数据库连接字符串（必填，推荐格式：postgresql+psycopg2://user:password@host:port/dbname?sslmode=require）
+    DATABASE_URL: str
     GOOGLE_API_KEY: SecretStr
 
     # 讯飞开放平台语音识别API凭证 (可选)
