@@ -42,6 +42,7 @@ COPY --from=builder /usr/local/bin/yt-dlp /usr/local/bin/yt-dlp
 
 # 复制后端应用代码
 COPY app ./app
+COPY debug_imports.py ./debug_imports.py
 
 # 暴露FastAPI默认端口
 EXPOSE 8000
