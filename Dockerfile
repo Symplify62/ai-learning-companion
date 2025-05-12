@@ -46,5 +46,5 @@ COPY app ./app
 # 暴露FastAPI默认端口
 EXPOSE 8000
 
-# 启动命令（使用uvicorn运行FastAPI应用）
-CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"] 
+# 启动命令：运行调试脚本
+CMD ["python", "debug_imports.py"] 
