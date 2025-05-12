@@ -69,7 +69,4 @@ def create_db_tables():
 # 注册启动事件，确保数据库表创建
 @app.on_event("startup")
 async def on_startup():
-    try:
-        create_db_tables()
-    except Exception as e:
-        print(f"Error during startup: {traceback.format_exc()}")
+    create_db_tables()

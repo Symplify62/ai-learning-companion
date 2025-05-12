@@ -1,3 +1,4 @@
+print("--- Python interpreter is reading app/main.py ---")
 # ===============================
 # Stage 1: Builder
 # ===============================
@@ -46,5 +47,5 @@ COPY app ./app
 # 暴露FastAPI默认端口
 EXPOSE 8000
 
-# 启动命令（使用uvicorn运行FastAPI应用）
-CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000", "--log-level", "debug"] 
+# 启动命令（使用python -m uvicorn运行FastAPI应用）
+CMD ["python", "-m", "uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000", "--log-level", "debug"] 
