@@ -1,0 +1,118 @@
+{
+  "session_id": "b1e0eb7b-a4e5-4bc5-b025-78fc66b8b00f",
+  "status": "all_processing_complete",
+  "user_id": null,
+  "created_at": "2025-05-12T17:46:03.880477",
+  "final_results": {
+    "notes": [
+      {
+        "note_id": "d3676dd0-e6db-4ecc-98a1-d4abe0a7c648",
+        "video_id": "cce8f358-328c-405c-a2d3-e286351f5020",
+        "session_id": "b1e0eb7b-a4e5-4bc5-b025-78fc66b8b00f",
+        "user_id": null,
+        "markdown_content": "## 核心观点\n\n* 内心强大需要减少对他人关注，专注于自身 (Video 00:00:00)\n* 强者不关注他人，高能量的人也如此 (Video 00:00:00)\n* 专注于自身，而非他人，才能获得快乐和自在 (Video 00:00:00)\n* 不要为别人的情绪买单，做自己心情的主人 (Video 00:44:39)\n* 少关注别人，成年人的世界没有那么多别人 (Video 00:55:43)\n\n## 主要示例\n\n> 看别人穿的一身大牌行头，勒紧裤腰带，也要置办一身人前风光的代价是背后啃馒头。(Video 00:12:47)\n\n## 行动建议\n\n* 稳定好自己的情绪，不要因为别人过度消耗精力 (Video 00:33:15)\n* 专注于自己喜欢的事情，慢慢找回能量，变得强大 (Video 00:33:15)\n\n## 总结\n\n本笔记总结了如何通过减少对他人关注来提升内心强大。视频指出，关注他人容易导致情绪起伏，而专注于自身则能提升能量，获得快乐和自在。建议稳定情绪，专注自身，做自己心情的主人。",
+        "is_user_edited": false,
+        "version": "1.0.0",
+        "created_at": "2025-05-12T17:48:36.701552",
+        "last_modified_at": "2025-05-12T17:48:36.701597",
+        "estimated_reading_time_seconds": 60,
+        "key_concepts_mentioned": [
+          "内心强大",
+          "关注他人",
+          "专注自身",
+          "情绪",
+          "能量"
+        ],
+        "summary_of_note": "本笔记的核心观点是减少对他人关注，专注于自身，才能获得内心强大。通过减少对他人情绪的关注，专注于自身，提升能量，才能获得快乐和自在。",
+        "knowledge_cues": [
+          {
+            "cue_id": "2d57dae7-da59-4a62-ad20-7839e3e8dfb7",
+            "note_id": "d3676dd0-e6db-4ecc-98a1-d4abe0a7c648",
+            "question_text": "笔记中提到，成年人的世界中，应该如何看待对其他人的关注？",
+            "answer_text": "成年人的世界没有那么多别人，应该减少对别人的关注。",
+            "difficulty_level": "low",
+            "source_reference_in_note": "少关注别人，成年人的世界没有那么多别人 (Video 00:55:43)"
+          },
+          {
+            "cue_id": "5748e877-5142-439f-9e66-36679733a8f6",
+            "note_id": "d3676dd0-e6db-4ecc-98a1-d4abe0a7c648",
+            "question_text": "结合笔记内容，解释为什么专注自身比关注他人更能带来快乐和自在？",
+            "answer_text": "关注他人容易导致情绪起伏，而专注于自身则能提升能量，获得快乐和自在。减少为别人的情绪买单，才能做自己心情的主人。",
+            "difficulty_level": "high",
+            "source_reference_in_note": "专注于自身，而非他人，才能获得快乐和自在 (Video 00:00:00)；不要为别人的情绪买单，做自己心情的主人 (Video 00:44:39)；本笔记总结了如何通过减少对他人关注来提升内心强大。视频指出，关注他人容易导致情绪起伏，而专注于自身则能提升能量，获得快乐和自在。"
+          },
+          {
+            "cue_id": "72281906-2bb5-4af5-856f-4a7499718ab2",
+            "note_id": "d3676dd0-e6db-4ecc-98a1-d4abe0a7c648",
+            "question_text": "根据笔记的行动建议，如何提升能量并变得强大？",
+            "answer_text": "稳定好自己的情绪，不要因为别人过度消耗精力；专注于自己喜欢的事情，慢慢找回能量，变得强大。",
+            "difficulty_level": "high",
+            "source_reference_in_note": "稳定好自己的情绪，不要因为别人过度消耗精力 (Video 00:33:15)；专注于自己喜欢的事情，慢慢找回能量，变得强大 (Video 00:33:15)"
+          },
+          {
+            "cue_id": "82e883d3-2dbf-49ff-b768-96cc0991e71e",
+            "note_id": "d3676dd0-e6db-4ecc-98a1-d4abe0a7c648",
+            "question_text": "根据笔记的核心观点，获得内心强大的关键是什么？",
+            "answer_text": "减少对他人关注，专注于自身。",
+            "difficulty_level": "low",
+            "source_reference_in_note": "核心观点：内心强大需要减少对他人关注，专注于自身 (Video 00:00:00)"
+          },
+          {
+            "cue_id": "94439568-95c2-4969-aa41-dc36573e6f1f",
+            "note_id": "d3676dd0-e6db-4ecc-98a1-d4abe0a7c648",
+            "question_text": "笔记中提供的示例（关于穿大牌衣服）旨在说明什么道理？",
+            "answer_text": "说明了过度关注他人，追求表面光鲜，可能会付出隐藏的代价。",
+            "difficulty_level": "medium",
+            "source_reference_in_note": "> 看别人穿的一身大牌行头，勒紧裤腰带，也要置办一身人前风光的代价是背后啃馒头。(Video 00:12:47)"
+          }
+        ]
+      }
+    ],
+    "plain_transcript_text": "强者不关注任何人，我发现高能量的人从不关注任何人。《被讨厌的勇气》中说，只要不关注任何人的动态，不揣测任何人的想法，不去设想一些没发生的事情，简单点，对一点，慢一点，你会发现你过得很自在。\n看别人穿的一身大牌行头，勒紧裤腰带，也要置办一身人前风光的代价是背后啃馒头。\n一直都把注意力放在别人身上，情绪起伏全凭别人左右，导致过去的生活一点也不快乐。\n想要内心强大，就一定不能太关注别人。\n稳定好自己的情绪已经很难了，不要因为别人过度的消耗自己的精力，当你不再关注任何人，只关注自己，专注于自己喜欢的事情中，慢慢找回自己的能量，慢慢变得强大。\n不要为别人的情绪买单，做自己心情的主人。\n少关注别人，成年人的世界没有那么多别人。",
+    "timestamped_transcript_segments": [
+      {
+        "segmentId": "seg_001",
+        "startTimeSeconds": 0,
+        "endTimeSeconds": 12.47,
+        "text": "强者不关注任何人，我发现高能量的人从不关注任何人。《被讨厌的勇气》中说，只要不关注任何人的动态，不揣测任何人的想法，不去设想一些没发生的事情，简单点，对一点，慢一点，你会发现你过得很自在。"
+      },
+      {
+        "segmentId": "seg_002",
+        "startTimeSeconds": 12.47,
+        "endTimeSeconds": 17.96,
+        "text": "看别人穿的一身大牌行头，勒紧裤腰带，也要置办一身人前风光的代价是背后啃馒头。"
+      },
+      {
+        "segmentId": "seg_003",
+        "startTimeSeconds": 17.96,
+        "endTimeSeconds": 24.15,
+        "text": "一直都把注意力放在别人身上，情绪起伏全凭别人左右，导致过去的生活一点也不快乐。"
+      },
+      {
+        "segmentId": "seg_004",
+        "startTimeSeconds": 24.15,
+        "endTimeSeconds": 33.15,
+        "text": "想要内心强大，就一定不能太关注别人。"
+      },
+      {
+        "segmentId": "seg_005",
+        "startTimeSeconds": 33.15,
+        "endTimeSeconds": 44.39,
+        "text": "稳定好自己的情绪已经很难了，不要因为别人过度的消耗自己的精力，当你不再关注任何人，只关注自己，专注于自己喜欢的事情中，慢慢找回自己的能量，慢慢变得强大。"
+      },
+      {
+        "segmentId": "seg_006",
+        "startTimeSeconds": 44.39,
+        "endTimeSeconds": 55.43,
+        "text": "不要为别人的情绪买单，做自己心情的主人。"
+      },
+      {
+        "segmentId": "seg_007",
+        "startTimeSeconds": 55.43,
+        "endTimeSeconds": 60.37,
+        "text": "少关注别人，成年人的世界没有那么多别人。"
+      }
+    ],
+    "ai_generated_video_title": "内心强大：别太关注别人"
+  }
+}

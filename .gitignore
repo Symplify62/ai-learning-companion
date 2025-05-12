@@ -1,0 +1,81 @@
+# --- Python ---
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/  # Python distribution folder
+downloads/ # If this is a general download folder, keep it. If specific, adjust.
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+*.egg-info/
+.installed.cfg
+*.egg
+
+# --- Virtual Environment ---
+venv/
+*.venv/ # Added for flexibility
+env/
+ENV/
+
+# --- Sensitive Files ---
+# Ensure .env is ignored everywhere
+.env
+.env.*
+!.env.example # Allow example env file
+
+# --- IDE ---
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# --- Operating System ---
+.DS_Store
+Thumbs.db
+
+# --- Node.js (Frontend - CRITICAL) ---
+# Dependency directories
+frontend_web/node_modules/ # Specific path for frontend node_modules
+
+# Vite build output (inside frontend_web)
+frontend_web/dist/ # Specific path for frontend build output
+
+# Logs
+logs/ # General logs folder
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+
+# Diagnostic reports
+report.[0-9]*.[0-9]*.[0-9]*.[0-9]*.json
+
+# Runtime data
+pids/
+*.pid
+*.seed
+*.pid.lock
+
+# Other common Node ignores
+.npm/
+.eslintcache
+*.tsbuildinfo
+.yarn-integrity
+*.tgz
+
+# --- Project Specific ---
+# Add any other project-specific ignores here
+# Example: Temporary media download folder if created inside the project
+# /temp_media/
+
+bili2text/
