@@ -36,12 +36,16 @@ def _update_status_in_session(session_id: str, status: ProcessingStatus):
     """Creates a local session to update the learning session status."""
     db_local: Session = SessionLocal()
     try:
+        print(f"会话 {session_id}: [_update_status_in_session] 正在调用 crud.update_learning_session_status, 状态为 {status.value}")
         crud.update_learning_session_status(db_local, session_id, status)
+        print(f"会话 {session_id}: [_update_status_in_session] 正在提交数据库事务...")
         db_local.commit()
+        print(f"会话 {session_id}: [_update_status_in_session] 数据库事务提交成功。")
         print(f"会话 {session_id}: 状态更新为 {status.value}")
     except Exception as e:
-        print(f"错误: 会话 {session_id}: 更新状态 {status.value} 失败: {e}")
+        print(f"错误: 会话 {session_id}: [_update_status_in_session] 发生异常，正在回滚数据库事务...")
         db_local.rollback()
+        print(f"错误: 会话 {session_id}: 更新状态 {status.value} 失败: {e}")
         raise
     finally:
         db_local.close()
@@ -51,11 +55,14 @@ def _get_session_in_session(session_id: str) -> Optional[db_models.LearningSessi
     """Creates a local session to get the learning session object."""
     db_local: Session = SessionLocal()
     try:
+        print(f"会话 {session_id}: [_get_session_in_session] 正在调用 crud.get_learning_session")
         db_session = crud.get_learning_session(db_local, session_id)
+        print(f"会话 {session_id}: [_get_session_in_session] crud.get_learning_session 调用完成。")
         return db_session
     except Exception as e:
-        print(f"错误: 会话 {session_id}: 获取会话对象失败: {e}")
+        print(f"错误: 会话 {session_id}: [_get_session_in_session] 发生异常，正在回滚数据库事务 (如果适用)...")
         db_local.rollback() # Rollback read transaction just in case
+        print(f"错误: 会话 {session_id}: 获取会话对象失败: {e}")
         return None # Return None on failure
     finally:
         db_local.close()
@@ -126,6 +133,7 @@ async def start_session_processing_pipeline(
             _update_status_in_session(session_id, ProcessingStatus.BILI_PROCESSING_STARTED)
 
             # a. Video Download
+            print(f"会话 {session_id}: 创建临时目录用于视频处理...")
             session_temp_base_dir = tempfile.mkdtemp(prefix=f"session_{session_id}_")
             download_dir = os.path.join(session_temp_base_dir, "video_download")
             os.makedirs(download_dir, exist_ok=True)
