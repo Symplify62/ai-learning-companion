@@ -1,6 +1,8 @@
 /**
  * @file apiClient.js
  * @description Centralized API client module for making requests to the backend.
+ * 
+ * 
  */
 
 // Import the environment variable for the base URL

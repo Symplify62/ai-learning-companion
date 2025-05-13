@@ -6,8 +6,8 @@ import styles from './TranscriptSubmitForm.module.scss'; // 导入SCSS模块
 import {
   createLearningSession,
   getLearningSessionStatus,
-  getLearningSessionNotes, // <--- 新增导入
-  getLearningSessionKnowledgeCues // <--- 新增导入
+  getLearningSessionNotes,
+  getLearningSessionKnowledgeCues
 } from '../services/apiClient'; 
 
 /**
@@ -16,7 +16,6 @@ import {
  *              polling for status, and displaying results.
  */
 
-// const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8001/api/v1';
 
 const TranscriptSubmitForm = () => {
   const [rawTranscriptText, setRawTranscriptText] = useState('');
