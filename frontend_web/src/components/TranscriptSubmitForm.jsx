@@ -85,7 +85,7 @@ const TranscriptSubmitForm = () => {
     };
 
     try {
-      const response = await fetch(`${API_BASE_URL}/learning_sessions/`, {
+      const response = await fetch(`${API_BASE_URL}/api/v1/learning_sessions/`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
