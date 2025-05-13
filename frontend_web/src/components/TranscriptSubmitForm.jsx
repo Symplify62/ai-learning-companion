@@ -128,7 +128,7 @@ const TranscriptSubmitForm = () => {
 
     try {
       // Fetch Note
-      const notesResponse = await fetch(`${API_BASE_URL}/learning_sessions/${sessionId}/notes`);
+      const notesResponse = await fetch(`${API_BASE_URL}/api/v1/learning_sessions/${sessionId}/notes`);
       if (!notesResponse.ok) {
         const errorData = await notesResponse.json().catch(() => ({}));
         throw new Error(`Failed to fetch notes: ${notesResponse.status} - ${errorData.detail || 'Unknown error'}`);
@@ -147,7 +147,7 @@ const TranscriptSubmitForm = () => {
         });
 
         // Fetch Knowledge Cues using the fetched note_id
-        const cuesResponse = await fetch(`${API_BASE_URL}/learning_sessions/notes/${note.note_id}/knowledge_cues`);
+        const cuesResponse = await fetch(`${API_BASE_URL}/api/v1/learning_sessions/notes/${note.note_id}/knowledge_cues`);
         if (!cuesResponse.ok) {
           const errorDataCues = await cuesResponse.json().catch(() => ({}));
           throw new Error(`Failed to fetch knowledge cues: ${cuesResponse.status} - ${errorDataCues.detail || 'Unknown error'}`);
@@ -202,7 +202,7 @@ const TranscriptSubmitForm = () => {
           return;
       }
       try {
-        const statusResponse = await fetch(`${API_BASE_URL}/learning_sessions/${apiResponse.sessionId}/status`);
+        const statusResponse = await fetch(`${API_BASE_URL}/api/v1/learning_sessions/${apiResponse.sessionId}/status`);
         console.log('checkStatus: fetch call made to:', statusResponse.url, 'Status code:', statusResponse.status);
 
         if (!statusResponse.ok) {
