@@ -3,6 +3,12 @@ import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { getStatusDisplay } from '../utils/statusConfig'; // 导入新的状态显示工具
 import styles from './TranscriptSubmitForm.module.scss'; // 导入SCSS模块
+import {
+  createLearningSession,
+  getLearningSessionStatus,
+  getLearningSessionNotes, // <--- 新增导入
+  getLearningSessionKnowledgeCues // <--- 新增导入
+} from '../services/apiClient'; 
 
 /**
  * @file TranscriptSubmitForm.jsx
@@ -10,7 +16,7 @@ import styles from './TranscriptSubmitForm.module.scss'; // 导入SCSS模块
  *              polling for status, and displaying results.
  */
 
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8001/api/v1';
+// const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8001/api/v1';
 
 const TranscriptSubmitForm = () => {
   const [rawTranscriptText, setRawTranscriptText] = useState('');
@@ -85,37 +91,38 @@ const TranscriptSubmitForm = () => {
     };
 
     try {
-      const response = await fetch(`${API_BASE_URL}/api/v1/learning_sessions/`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(payload),
-      });
-
-      const responseData = await response.json();
-
-      if (!response.ok) {
-        let errorMessage = `API Error: ${response.status}`;
-        if (responseData && responseData.detail) {
-          if (Array.isArray(responseData.detail)) {
-            errorMessage += responseData.detail.map(d => ` - ${d.loc.join('.')} - ${d.msg} (${d.type})`).join('; ');
-          } else if (typeof responseData.detail === 'string') {
-            errorMessage += ` - ${responseData.detail}`;
-          }
-        } else {
-          errorMessage += ' - No error details available.';
-        }
-        throw new Error(errorMessage);
-      }
+      // 调用 apiClient 中的 createLearningSession 函数
+      // API Client 会处理 response.ok 检查和 JSON 解析
+      // 如果请求失败，apiClient 会抛出包含状态和详细信息的错误
+      const initialApiResponse = await createLearningSession(payload);
       
-      setApiResponse(responseData); // Store session_id, status, timestamp
-      setCurrentSessionStatus(responseData.status);
-      console.log('handleSubmit: Initial apiResponse set:', responseData); // Log 1
+      setApiResponse(initialApiResponse); 
+      // 确保 initialApiResponse 包含 status 字段，或者根据实际返回调整
+      if (initialApiResponse && initialApiResponse.status) {
+        setCurrentSessionStatus(initialApiResponse.status);
+      } else {
+        // 如果API响应中没有status字段，则可能需要回退或记录警告
+        console.warn('handleSubmit: Initial API response did not contain a status field.', initialApiResponse);
+        // setCurrentSessionStatus('unknown'); // 或者一个合适的回退状态
+      }
+      console.log('handleSubmit: Initial apiResponse set:', initialApiResponse);
 
     } catch (err) {
-      setError(err.message || 'An unexpected error occurred during submission. Please try again.');
-      console.error("Submission error:", err);
+      // 处理来自 apiClient 的错误
+      let displayError = 'An unexpected error occurred. Please try again.';
+      // err 对象可能包含 status, statusText, 和 data (解析后的错误响应体)
+      if (err.data && err.data.detail) {
+        const detailMsg = Array.isArray(err.data.detail) 
+          ? err.data.detail.map(d => (d.loc ? `${d.loc.join('.')} - ${d.msg}` : d.msg) || JSON.stringify(d)).join('; ') 
+          : err.data.detail;
+        displayError = `API Error (${err.status || 'Client Error'}): ${detailMsg}`;
+      } else if (err.message) {
+        // 对于网络错误或 apiClient 中没有 .data.detail 的其他自定义错误
+        displayError = err.message;
+      }
+      setError(displayError);
+      // 记录更详细的错误信息，包括可能的原始错误对象或其 .data 部分
+      console.error("Submission error details:", err.data || err.message, err); 
     } finally {
       setLoading(false);
     }
@@ -127,13 +134,9 @@ const TranscriptSubmitForm = () => {
     setError(null); // Clear previous errors before fetching new data
 
     try {
-      // Fetch Note
-      const notesResponse = await fetch(`${API_BASE_URL}/api/v1/learning_sessions/${sessionId}/notes`);
-      if (!notesResponse.ok) {
-        const errorData = await notesResponse.json().catch(() => ({}));
-        throw new Error(`Failed to fetch notes: ${notesResponse.status} - ${errorData.detail || 'Unknown error'}`);
-      }
-      const notesData = await notesResponse.json();
+      // Fetch Note using apiClient
+      // Replace: const notesResponse = await fetch(...); if (!notesResponse.ok); const notesData = await notesResponse.json();
+      const notesData = await getLearningSessionNotes(sessionId);
 
       if (notesData && notesData.length > 0) {
         const note = notesData[0]; // Assuming the first note is the relevant one
@@ -146,26 +149,36 @@ const TranscriptSubmitForm = () => {
           // Add any other note fields you need from the backend response
         });
 
-        // Fetch Knowledge Cues using the fetched note_id
-        const cuesResponse = await fetch(`${API_BASE_URL}/api/v1/learning_sessions/notes/${note.note_id}/knowledge_cues`);
-        if (!cuesResponse.ok) {
-          const errorDataCues = await cuesResponse.json().catch(() => ({}));
-          throw new Error(`Failed to fetch knowledge cues: ${cuesResponse.status} - ${errorDataCues.detail || 'Unknown error'}`);
-        }
-        const cuesData = await cuesResponse.json();
+        // Fetch Knowledge Cues using apiClient
+        // Replace: const cuesResponse = await fetch(...); if (!cuesResponse.ok); const cuesData = await cuesResponse.json();
+        // Pass note.note_id to the new function
+        const cuesData = await getLearningSessionKnowledgeCues(note.note_id);
+        
         setKnowledgeCuesData(cuesData);
         setIsResultsPanelVisible(true); // Show results panel after fetching
         setIsProcessingNewSubmission(false); // Done processing, hide placeholder
       } else {
         setGeneratedNoteData(null); // Or some indicator that no note was found
         setKnowledgeCuesData(null);
-        setError('Processing completed, but no note was generated or found.');
-        setIsProcessingNewSubmission(false); // Error occurred, stop placeholder
+        // Refined error message to be more specific
+        setError('Processing completed, but no notes were generated or found for this session.');
+        setIsProcessingNewSubmission(false); 
       }
     } catch (err) {
-      console.error("Error fetching note and cues:", err);
-      setError(err.message || 'An error occurred while fetching generated content.');
-      // Clear potentially partial data
+      // Handle errors from apiClient functions
+      let displayError = 'An error occurred while fetching generated content.';
+      if (err.data && err.data.detail) {
+        const detailMsg = Array.isArray(err.data.detail) 
+          ? err.data.detail.map(d => (d.loc ? `${d.loc.join('.')} - ${d.msg}` : d.msg) || JSON.stringify(d)).join('; ') 
+          : err.data.detail;
+        displayError = `Fetch Error (${err.status || 'Client Error'}): ${detailMsg}`;
+      } else if (err.message) {
+         displayError = `Fetch Error: ${err.message}`;
+      }
+
+      console.error("Error fetching note and cues details:", err.data || err.message, err);
+      setError(displayError);
+      // Clear potentially partial data on error
       setGeneratedNoteData(null);
       setKnowledgeCuesData(null);
       setIsProcessingNewSubmission(false); // Error occurred, stop placeholder
@@ -202,19 +215,25 @@ const TranscriptSubmitForm = () => {
           return;
       }
       try {
-        const statusResponse = await fetch(`${API_BASE_URL}/api/v1/learning_sessions/${apiResponse.sessionId}/status`);
-        console.log('checkStatus: fetch call made to:', statusResponse.url, 'Status code:', statusResponse.status);
-
-        if (!statusResponse.ok) {
-          const errorDataText = await statusResponse.text(); 
-          console.error(`checkStatus: Polling API error! Status: ${statusResponse.status}, Response text: ${errorDataText}`);
-          setError(`Error checking status: ${statusResponse.status}. Response: ${errorDataText.substring(0,150)}. Polling stopped.`);
-          clearInterval(pollingIntervalIdRef.current);
-          pollingIntervalIdRef.current = null;
-          return;
+        // Replace fetch with apiClient.getLearningSessionStatus
+        const statusData = await getLearningSessionStatus(apiResponse.sessionId);
+        
+        // apiClient handles .ok check and .json() parsing.
+        // statusData is the parsed JSON response.
+        console.log('checkStatus: Fetched statusData via apiClient:', statusData);
+        
+        // Ensure statusData is not null and has a status property before proceeding
+        if (!statusData || typeof statusData.status === 'undefined') {
+            console.error('checkStatus: Invalid or null statusData received from API Client for sessionId:', apiResponse.sessionId, statusData);
+            // Optionally, set an error state or stop polling if the response is unexpected.
+            // For now, we'll log and potentially let it be caught by the outer catch if it's critical.
+            // If it's a valid scenario for statusData to be null (e.g., 204 from API), handle appropriately.
+            // Our apiClient currently returns null for 204, so a check for statusData itself is important.
+            // If status is critical, maybe throw an error here to stop polling.
+            // For robustness, let's assume if statusData is null or status is missing, it's an issue.
+            throw new Error('Received invalid or empty status data from server.');
         }
-        const statusData = await statusResponse.json(); 
-        console.log('checkStatus: Fetched statusData:', statusData);
+
         setCurrentSessionStatus(statusData.status); 
 
         const terminalStatuses = ["all_processing_complete", "error_in_processing", "error_in_a1_llm", "error_in_a2_llm", "error_in_b_llm", "error_in_d_llm"];
@@ -227,36 +246,46 @@ const TranscriptSubmitForm = () => {
             if (statusData.final_results && statusData.final_results.notes && statusData.final_results.notes.length > 0) {
               console.log('checkStatus: Processing complete. Found final_results in status response.');
               const firstNoteWithCues = statusData.final_results.notes[0];
-              // ***** DEBUGGING NOTE CONTENT *****
-              console.log('Received firstNoteWithCues from API:', JSON.stringify(firstNoteWithCues, null, 2));
-              console.log('Keys in firstNoteWithCues:', Object.keys(firstNoteWithCues));
-              // ***********************************
               setDataFetchingLoading(true); 
               
               setGeneratedNoteData({
                 noteId: firstNoteWithCues.note_id,
-                markdownContent: firstNoteWithCues.markdown_content, // Assuming 'markdown_content'
+                markdownContent: firstNoteWithCues.markdown_content,
                 estimatedReadingTimeSeconds: firstNoteWithCues.estimated_reading_time_seconds,
                 keyConceptsMentioned: firstNoteWithCues.key_concepts_mentioned,
                 summaryOfNote: firstNoteWithCues.summary_of_note,
               });
               setKnowledgeCuesData(firstNoteWithCues.knowledge_cues || []);
-              setIsResultsPanelVisible(true); // Show results panel
-              setIsProcessingNewSubmission(false); // Done processing new, hide placeholder
+              setIsResultsPanelVisible(true); 
+              setIsProcessingNewSubmission(false); 
               setDataFetchingLoading(false);
             } else {
               console.log('checkStatus: Processing complete, but no final_results in status response or no notes. Falling back to fetchNoteAndCues.');
+              // Ensure fetchNoteAndCues also uses apiClient or is refactored
               fetchNoteAndCues(apiResponse.sessionId); 
             }
           } else {
-            setError(`Processing failed with status: ${statusData.status}`);
+            // Use a more user-friendly error message if possible, or the status itself
+            const errorDetail = statusData.error_details || statusData.status;
+            setError(`Processing failed with status: ${errorDetail}`);
           }
         } else {
           console.log('checkStatus: Status is still non-terminal:', statusData.status, '. Polling continues.');
         }
       } catch (err) {
-        console.error("checkStatus: Polling fetch/logic error:", err);
-        setError('Network error or other issue during status polling. Polling stopped.');
+        // Handle errors from apiClient.getLearningSessionStatus
+        let displayError = 'Error checking status. Polling stopped.';
+        if (err.data && err.data.detail) {
+          const detailMsg = Array.isArray(err.data.detail)
+            ? err.data.detail.map(d => (d.loc ? `${d.loc.join('.')} - ${d.msg}` : d.msg) || JSON.stringify(d)).join('; ')
+            : err.data.detail;
+          displayError = `Polling Error (${err.status || 'Client Error'}): ${detailMsg}. Polling stopped.`;
+        } else if (err.message) {
+          displayError = `Polling Error: ${err.message}. Polling stopped.`;
+        }
+        
+        console.error("checkStatus: Polling fetch/logic error:", err.data || err.message, err);
+        setError(displayError);
         if (pollingIntervalIdRef.current) {
           clearInterval(pollingIntervalIdRef.current);
           pollingIntervalIdRef.current = null;
