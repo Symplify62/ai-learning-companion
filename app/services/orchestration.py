@@ -3,6 +3,7 @@
  
  该模块负责协调各AI模块的工作流程，管理整个处理流程。
 """
+import logging # Added for logging
 import uuid
 import json
 import asyncio
@@ -18,34 +19,34 @@ from app.db import models as db_models
 from app.db import crud
 from app.db.database import SessionLocal
 from app.core.config import Settings
-from app.core.enums import ProcessingStatus # Added import
+from app.core.enums import ProcessingStatus, InputSourceType # Added InputSourceType
 from app.utils.transcript_parser import parse_raw_transcript_to_segments
 from app.utils.audio_processor import prepare_audio_for_asr
 from app.services.asr.factory import get_asr_service
 from app.services.asr.base import AbstractAsrService
 from app.ai_modules.module_a1_llm_caller import invoke_module_a1_llm
-from app.ai_modules.module_a2_llm_caller import invoke_module_a2_llm
+from app.ai_modules.module_a2_text_preprocessing_llm_caller import invoke_module_a2_text_preprocessing_llm 
+from app.ai_modules.module_a2_llm_caller import invoke_module_a2_llm # This is existing A2 for key info extraction
 from app.ai_modules.module_b_llm_caller import invoke_module_b_llm
 from app.ai_modules.module_d_llm_caller import invoke_module_d_llm
 from app.models.data_models import LearningSessionInput, GeneratedNoteRead, KnowledgeCueRead # Modified
 # from app.ai_modules.module_d_knowledge_cues import generate_knowledge_cues # 已移除 # Keep this line if it was meant to be commented out.
 from app.core.utils import normalize_bilibili_url
 
+logger = logging.getLogger(__name__) # Added logger instance
+
 # Helper function to update status within its own session
 def _update_status_in_session(session_id: str, status: ProcessingStatus):
     """Creates a local session to update the learning session status."""
     db_local: Session = SessionLocal()
     try:
-        print(f"会话 {session_id}: [_update_status_in_session] 正在调用 crud.update_learning_session_status, 状态为 {status.value}")
+        logger.info(f"Session {session_id}: Updating status to {status.value}.")
         crud.update_learning_session_status(db_local, session_id, status)
-        print(f"会话 {session_id}: [_update_status_in_session] 正在提交数据库事务...")
         db_local.commit()
-        print(f"会话 {session_id}: [_update_status_in_session] 数据库事务提交成功。")
-        print(f"会话 {session_id}: 状态更新为 {status.value}")
+        logger.info(f"Session {session_id}: Status update to {status.value} successful.")
     except Exception as e:
-        print(f"错误: 会话 {session_id}: [_update_status_in_session] 发生异常，正在回滚数据库事务...")
+        logger.error(f"Session {session_id}: Failed to update status to {status.value}. Error: {e}", exc_info=True)
         db_local.rollback()
-        print(f"错误: 会话 {session_id}: 更新状态 {status.value} 失败: {e}")
         raise
     finally:
         db_local.close()
@@ -55,14 +56,13 @@ def _get_session_in_session(session_id: str) -> Optional[db_models.LearningSessi
     """Creates a local session to get the learning session object."""
     db_local: Session = SessionLocal()
     try:
-        print(f"会话 {session_id}: [_get_session_in_session] 正在调用 crud.get_learning_session")
+        logger.debug(f"Session {session_id}: Fetching session object.")
         db_session = crud.get_learning_session(db_local, session_id)
-        print(f"会话 {session_id}: [_get_session_in_session] crud.get_learning_session 调用完成。")
+        logger.debug(f"Session {session_id}: Session object fetched successfully.")
         return db_session
     except Exception as e:
-        print(f"错误: 会话 {session_id}: [_get_session_in_session] 发生异常，正在回滚数据库事务 (如果适用)...")
+        logger.error(f"Session {session_id}: Failed to fetch session object. Error: {e}", exc_info=True)
         db_local.rollback() # Rollback read transaction just in case
-        print(f"错误: 会话 {session_id}: 获取会话对象失败: {e}")
         return None # Return None on failure
     finally:
         db_local.close()
@@ -87,7 +87,8 @@ async def start_session_processing_pipeline(
     session_id: str, 
     video_id: str, 
     learning_session_input: LearningSessionInput,
-    settings: Settings
+    settings: Settings,
+    learning_objectives: Optional[str] = None # Added learning_objectives
 ) -> None:
     """
      启动会话处理管道
@@ -101,7 +102,13 @@ async def start_session_processing_pipeline(
      @param video_id 视频ID (由API层创建/管理)
      @param learning_session_input 包含原始转录或B站URL及其他初始数据的输入对象
      @param settings 应用程序配置设置
+     @param learning_objectives 用户提供的学习目标或重点 (可选)
     """
+    logger.info(f"Session {session_id} (Video ID: {video_id}): Starting processing pipeline.")
+    logger.info(f"Session {session_id}: Learning objectives provided: {'Yes' if learning_objectives else 'No'}")
+    logger.info(f"Session {session_id}: Input source_type: {learning_session_input.source_type.value if learning_session_input.source_type else 'Not specified (will default based on input fields)'}")
+
+
     module_a1_output: Dict[str, Any]
     module_a2_output: Dict[str, Any]
     
@@ -125,8 +132,30 @@ async def start_session_processing_pipeline(
     # This will hold the transcript text to be processed by Module A1
     # transcript_for_a1: str = "" # No longer the primary way to pass transcript to A1 logic
     # session_temp_base_dir: Optional[str] = None # Defined earlier
+    
+    # Determine source type from input
+    source_type = learning_session_input.source_type
+    processed_plain_text_for_a1_like_structure: Optional[str] = None # For PLAIN_TEXT path
 
     try:
+        # --- Database operations for LearningSource BEFORE A1 ---
+        # Store learning_objectives in LearningSource if provided
+        if learning_objectives:
+            db_local_source_init: Session = SessionLocal()
+            try:
+                crud.update_learning_source_objectives( # This new CRUD function needs to be created
+                    db=db_local_source_init,
+                    video_id=video_id,
+                    learning_objectives=learning_objectives
+                )
+                db_local_source_init.commit()
+                print(f"会话 {session_id}: 学习目标已保存到 LearningSource (video_id: {video_id})。")
+            except Exception as e_db_lo:
+                print(f"错误: 会话 {session_id}: 保存学习目标到 LearningSource 失败: {e_db_lo}")
+                db_local_source_init.rollback()
+                # Decide if this is a fatal error for the pipeline. For now, log and continue.
+            finally:
+                db_local_source_init.close()
         if processed_bilibili_url_str:
             print(f"会话 {session_id}: 检测到Bilibili URL: {processed_bilibili_url_str}。开始视频处理流程。")
             # Use helper for initial status update
@@ -298,46 +327,105 @@ async def start_session_processing_pipeline(
             print(f"会话 {session_id}: 讯飞语音转文字处理完成。(连接后文本长度: {len(_log_full_transcript_text)} 字)")
 
             # transcript_for_a1 = full_transcript_text # This assignment is no longer the primary path for A1 input from Bili
-            
-        elif raw_transcript_text_from_input and raw_transcript_text_from_input.strip():
-            print(f"会话 {session_id}: 检测到原始转录文本。开始直接处理。")
-            # Use helper for status update
+        
+        elif source_type == InputSourceType.TIMESTAMPED_TEXT:
+            print(f"会话 {session_id}: 检测到带时间戳的原始转录文本。开始直接处理。")
             _update_status_in_session(session_id, ProcessingStatus.TRANSCRIPT_PROCESSING_STARTED)
+            if not raw_transcript_text_from_input or not raw_transcript_text_from_input.strip():
+                 raise ValueError("Timestamped text input is empty or whitespace.")
             parsed_segments_for_a1 = parse_raw_transcript_to_segments(raw_transcript_text_from_input)
             if not parsed_segments_for_a1:
-                print(f"错误: 会话 {session_id}: 提供的原始转录文本解析后为空或无效。")
-                # Consider a specific error status if needed, or let it fall to generic pipeline error
-                # For now, let the generic error handler catch this if it propagates
-                raise ValueError("Parsed raw transcript resulted in no segments.")
-        else:
-            print(f"错误: 会话 {session_id}: 未提供Bilibili URL或原始转录文本。")
-            # Use helper for status update
+                print(f"错误: 会话 {session_id}: 提供的带时间戳的转录文本解析后为空或无效。")
+                raise ValueError("Parsed timestamped transcript resulted in no segments.")
+        
+        elif source_type == InputSourceType.PLAIN_TEXT:
+            print(f"会话 {session_id}: 检测到纯文本输入。开始纯文本处理流程。")
+            _update_status_in_session(session_id, ProcessingStatus.TRANSCRIPT_PROCESSING_STARTED) # Or a new status like PLAIN_TEXT_PROCESSING_STARTED
+            if not raw_transcript_text_from_input or not raw_transcript_text_from_input.strip():
+                raise ValueError("Plain text input is empty or whitespace.")
+            
+            # Call the new Module A.2 for plain text preprocessing (placeholder)
+            print(f"会话 {session_id}: 开始模块A.2_text (纯文本预处理)...")
+            # _update_status_in_session(session_id, ProcessingStatus.A2_TEXT_PREPROCESSING_ACTIVE) # Define this status
+            try:
+                processed_plain_text_for_a1_like_structure = await invoke_module_a2_text_preprocessing_llm(
+                    plain_text_input=raw_transcript_text_from_input, # Corrected arg name
+                    settings=settings
+                )
+                print(f"会话 {session_id}: 模块A.2_text (纯文本预处理) LLM调用完成。")
+                # _update_status_in_session(session_id, ProcessingStatus.A2_TEXT_PREPROCESSING_COMPLETE) # Define this status
+            except Exception as a2_text_exc:
+                print(f"错误: 会话 {session_id}: 模块A.2_text LLM调用失败: {a2_text_exc}")
+                # _update_status_in_session(session_id, ProcessingStatus.ERROR_IN_A2_TEXT_LLM) # Define this status
+                raise
+
+            # For plain text, the original Module A.1 (timestamp-based preprocessing) is SKIPPED.
+            # We need to construct a `module_a1_output`-like dictionary for Module B.
+            # Module A.1's primary role for Module B is providing `videoTitle` and `transcriptSegments`.
+            # For plain text, `transcriptSegments` will be simplified.
+            module_a1_output = {
+                "videoId": video_id, # System generated video_id
+                "videoTitle": initial_video_title or "Plain Text Input",
+                "videoDescription": initial_source_description or "User-submitted plain text.",
+                "sourceDescription": "Plain text input",
+                "processingTimestamp": datetime.now().isoformat(),
+                "totalDurationSeconds": None, # Not applicable for plain text
+                "transcriptSegments": [
+                    {"segmentId": str(uuid.uuid4()), "startTimeSeconds": 0, "endTimeSeconds": 0, "text": processed_plain_text_for_a1_like_structure}
+                ] # Simplified structure for plain text
+            }
+            # Save this simplified A1-like output to DB (similar to what's done after actual A1)
+            db_local_a1_plain_text: Session = SessionLocal()
+            try:
+                crud.update_learning_source_after_a1(
+                    db=db_local_a1_plain_text,
+                    video_id=video_id,
+                    video_title_ai=module_a1_output["videoTitle"],
+                    video_description_ai=module_a1_output["videoDescription"],
+                    source_description_ai=module_a1_output["sourceDescription"],
+                    total_duration_seconds_ai=module_a1_output.get("totalDurationSeconds"),
+                    structured_transcript_segments_json=json.dumps(
+                        module_a1_output["transcriptSegments"],
+                        ensure_ascii=False
+                    )
+                )
+                db_local_a1_plain_text.commit()
+                print(f"会话 {session_id}: 纯文本的简化A1输出已保存。")
+            except Exception as e_db_a1_pt:
+                print(f"错误: 会话 {session_id}: 保存纯文本的简化A1输出失败: {e_db_a1_pt}")
+                db_local_a1_plain_text.rollback()
+                raise
+            finally:
+                db_local_a1_plain_text.close()
+            
+            _update_status_in_session(session_id, ProcessingStatus.A1_PREPROCESSING_COMPLETE) # Reuse status for simplicity
+
+        else: # Should be InputSourceType.URL, handled by the `if processed_bilibili_url_str:` block
+            print(f"错误: 会话 {session_id}: 未知的 source_type '{source_type}' 或输入不一致。")
             _update_status_in_session(session_id, ProcessingStatus.ERROR_NO_VALID_INPUT)
-            raise ValueError("No valid input (Bilibili URL or raw transcript text) provided for the session.")
+            raise ValueError(f"Invalid source_type '{source_type}' or inconsistent input provided for the session.")
 
-        # Common check for empty segments before A1 call
-        if not parsed_segments_for_a1:
-            print(f"警告: 会话 {session_id}: 为模块A.1准备的解析片段列表为空。后续处理可能产生空结果或失败。")
-            # Module A1 should ideally handle an empty list gracefully.
+        # --- Module A.1 (Timestamped Text or Bili Video Path) ---
+        # This block is now only executed if not PLAIN_TEXT
+        if source_type != InputSourceType.PLAIN_TEXT:
+            if not parsed_segments_for_a1: # Common check for empty segments before A1 call
+                print(f"警告: 会话 {session_id}: 为模块A.1准备的解析片段列表为空。后续处理可能产生空结果或失败。")
+            
+            print(f"会话 {session_id}: 开始模块A.1 (转录预处理与元数据生成)...")
+            _update_status_in_session(session_id, ProcessingStatus.A1_PREPROCESSING_ACTIVE)
+            try:
+                module_a1_output = await invoke_module_a1_llm(
+                    parsed_transcript_segments=parsed_segments_for_a1, 
+                    user_input_title=initial_video_title,
+                    user_input_source_desc=initial_source_description,
+                    settings=settings
+                )
+            except Exception as a1_exc:
+                print(f"错误: 会话 {session_id}: 模块A.1 LLM调用失败: {a1_exc}")
+                _update_status_in_session(session_id, ProcessingStatus.ERROR_IN_A1_LLM)
+                raise 
 
-        print(f"会话 {session_id}: 开始模块A.1 (转录预处理与元数据生成)...")
-        # Use helper for status update
-        _update_status_in_session(session_id, ProcessingStatus.A1_PREPROCESSING_ACTIVE)
-
-        try:
-            module_a1_output = await invoke_module_a1_llm(
-                parsed_transcript_segments=parsed_segments_for_a1, 
-                user_input_title=initial_video_title,
-                user_input_source_desc=initial_source_description,
-                settings=settings
-            )
-        except Exception as a1_exc:
-            print(f"错误: 会话 {session_id}: 模块A.1 LLM调用失败: {a1_exc}")
-            # Use helper for status update
-            _update_status_in_session(session_id, ProcessingStatus.ERROR_IN_A1_LLM)
-            raise 
-
-        # --- Database operations after Module A.1 ---
+            # --- Database operations after Module A.1 (Timestamped/URL path) ---
         db_local: Session = SessionLocal()
         try:
             current_iso_timestamp = datetime.now().isoformat()
@@ -372,28 +460,58 @@ async def start_session_processing_pipeline(
         finally:
             db_local.close()
 
-        # Update status after A.1 DB operations are complete (even if A1 LLM failed, DB save could succeed if A1 output was mocked/partial)
-        # But the try...except above re-raises, so this status update only happens if DB save was attempted AND succeeded.
-        # To ensure status update happens even if DB save fails BUT LLM succeeded, need careful placement.
-        # Let's move status update outside the inner DB try/except but still after LLM call.
-        _update_status_in_session(session_id, ProcessingStatus.A1_PREPROCESSING_COMPLETE) # This will create its own session
+            db_local: Session = SessionLocal()
+            try:
+                current_iso_timestamp = datetime.now().isoformat()
+                if module_a1_output.get("processingTimestamp") == "[SYSTEM_GENERATED_TIMESTAMP_YYYY-MM-DDTHH:MM:SSZ]":
+                    module_a1_output["processingTimestamp"] = current_iso_timestamp
+                else:
+                    print(f"警告: 会话 {session_id}: 模块A.1 LLM未按预期提供时间戳占位符。 使用当前时间。 LLM时间戳: {module_a1_output.get('processingTimestamp')}")
+                    module_a1_output["processingTimestamp"] = current_iso_timestamp
 
+                if "videoId" in module_a1_output and module_a1_output["videoId"] != video_id:
+                    print(f"警告: 会话 {session_id}: 模块A.1 LLM生成的videoId '{module_a1_output['videoId']}' 与系统中已有的videoId '{video_id}' 不符。将使用系统videoId.")
+
+                crud.update_learning_source_after_a1(
+                    db=db_local, # Use local session
+                    video_id=video_id, 
+                    video_title_ai=module_a1_output["videoTitle"],
+                    video_description_ai=module_a1_output["videoDescription"],
+                    source_description_ai=module_a1_output["sourceDescription"],
+                    total_duration_seconds_ai=module_a1_output.get("totalDurationSeconds"),
+                    structured_transcript_segments_json=json.dumps(
+                        module_a1_output["transcriptSegments"],
+                        ensure_ascii=False
+                    )
+                )
+                db_local.commit()
+                print(f"会话 {session_id}: 模块A.1处理完成，信息已保存。")
+            except Exception as e_db_a1:
+                print(f"错误: 会话 {session_id}: 保存模块A.1结果失败: {e_db_a1}")
+                db_local.rollback()
+                raise
+            finally:
+                db_local.close()
+            _update_status_in_session(session_id, ProcessingStatus.A1_PREPROCESSING_COMPLETE)
+
+
+        # --- Module A.2 (Key Information Extraction - Common for all text-based inputs) ---
+        # Module A.1 output (real or constructed for plain text) is the input here.
         print(f"会话 {session_id}: 开始模块A.2 (关键信息提取)...")
-        # Use helper for status update
         _update_status_in_session(session_id, ProcessingStatus.A2_EXTRACTION_ACTIVE)
         
         try:
-            module_a2_output = await invoke_module_a2_llm(
-                module_a1_llm_output=module_a1_output, 
+            # This is the original Module A.2 for key information extraction
+            module_a2_output = await invoke_module_a2_llm( 
+                module_a1_llm_output=module_a1_output, # module_a1_output is now standardized
                 settings=settings
             )
         except Exception as a2_exc:
             print(f"错误: 会话 {session_id}: 模块A.2 LLM调用失败: {a2_exc}")
-            # Use helper for status update
             _update_status_in_session(session_id, ProcessingStatus.ERROR_IN_A2_LLM)
             raise
 
-        # --- Database operations after Module A.2 ---
+        # --- Database operations after Module A.2 (Key Info Extraction) ---
         db_local: Session = SessionLocal()
         try:
             a2_processing_timestamp = module_a2_output.get("processingTimestamp")
@@ -432,6 +550,7 @@ async def start_session_processing_pipeline(
             real_module_b_output = await invoke_module_b_llm(
                 module_a1_output=module_a1_output,
                 module_a2_output=module_a2_output,
+                learning_objectives=learning_objectives, # Pass learning_objectives to Module B
                 settings=settings
             )
         except Exception as b_exc:

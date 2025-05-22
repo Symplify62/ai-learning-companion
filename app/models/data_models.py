@@ -1,7 +1,7 @@
 from typing import Optional, List, Dict, Any
 from datetime import datetime
-from pydantic import BaseModel, HttpUrl
-from app.core.enums import ProcessingStatus
+from pydantic import BaseModel, HttpUrl, validator, root_validator
+from app.core.enums import ProcessingStatus, InputSourceType # Added InputSourceType
 
 class LearningSessionInput(BaseModel):
     """
@@ -16,6 +16,36 @@ class LearningSessionInput(BaseModel):
     initialVideoTitle: Optional[str] = None
     initialSourceDescription: Optional[str] = None
     bilibili_video_url: Optional[HttpUrl] = None
+    learning_objectives: Optional[str] = None # Added for user's learning objectives
+    source_type: Optional[InputSourceType] = None # To specify type of rawTranscriptText
+
+    @root_validator(pre=True)
+    def check_input_source_consistency(cls, values: Dict[str, Any]) -> Dict[str, Any]:
+        bili_url = values.get('bilibili_video_url')
+        raw_text = values.get('rawTranscriptText')
+        source_type = values.get('source_type')
+
+        if bili_url and raw_text:
+            raise ValueError("Provide either 'bilibili_video_url' or 'rawTranscriptText', but not both.")
+        
+        if not bili_url and not raw_text:
+            raise ValueError("Either 'bilibili_video_url' or 'rawTranscriptText' must be provided.")
+
+        if bili_url:
+            # If URL is provided, source_type should ideally be URL or None (will be set to URL)
+            if source_type and source_type != InputSourceType.URL:
+                raise ValueError(f"source_type must be '{InputSourceType.URL}' when bilibili_video_url is provided.")
+            values['source_type'] = InputSourceType.URL # Default to URL if URL is given
+        elif raw_text:
+            if not source_type or source_type == InputSourceType.URL:
+                raise ValueError(f"source_type must be '{InputSourceType.TIMESTAMPED_TEXT}' or '{InputSourceType.PLAIN_TEXT}' when rawTranscriptText is provided.")
+        
+        # Ensure source_type is always set if validation passes to this point
+        if not values.get('source_type'): # Should be set if bili_url was present
+             # This case should ideally not be reached if the above logic is correct
+             raise ValueError("source_type could not be determined or is missing.")
+
+        return values
 
 class LearningSessionResponse(BaseModel):
     """
@@ -90,7 +120,7 @@ class GeneratedNote(BaseModel):
     is_user_edited: bool = False
     version: str = "1.0.0"
     created_at: datetime
-    last_modified_at: datetime
+    last_edited_at: Optional[datetime] = None # Renamed and made optional as it might not exist for old notes
     estimated_reading_time_seconds: Optional[int] = None
     key_concepts_mentioned: Optional[List[str]] = None
     summary_of_note: Optional[str] = None
@@ -112,6 +142,10 @@ class KnowledgeCue(BaseModel):
     answer_text: str
     difficulty_level: str
     source_reference_in_note: Optional[str] = None
+
+class NoteUpdate(BaseModel):
+    """Pydantic model for updating a note's content."""
+    markdown_content: str
 
 # --- New/Updated Models for API Read Operations ---
 
@@ -138,7 +172,7 @@ class GeneratedNoteRead(BaseModel):
     is_user_edited: bool
     version: str
     created_at: datetime
-    last_modified_at: datetime
+    last_edited_at: Optional[datetime] = None # Renamed and made optional
     estimated_reading_time_seconds: Optional[int] = None
     key_concepts_mentioned: Optional[List[str]] = None
     summary_of_note: Optional[str] = None

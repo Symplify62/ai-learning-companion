@@ -297,6 +297,28 @@ def update_learning_source_after_a2(
     db.refresh(db_source)
     return db_source
 
+def update_learning_source_objectives(
+    db: Session,
+    video_id: str,
+    learning_objectives: Optional[str]
+) -> Optional[db_models.LearningSource]:
+    """
+     Updates the learning_objectives field of a LearningSource record.
+
+     @param db 数据库会话
+     @param video_id 视频ID
+     @param learning_objectives 用户提供的学习目标或重点
+     @return 更新后的学习资源数据库模型实例，如果不存在则返回None
+    """
+    db_source = db.query(db_models.LearningSource).filter(db_models.LearningSource.video_id == video_id).first()
+    if db_source is None:
+        return None
+
+    db_source.learning_objectives = learning_objectives
+    db.commit()
+    db.refresh(db_source)
+    return db_source
+
 def get_learning_source_by_video_id(db: Session, video_id: str) -> Optional[db_models.LearningSource]:
     """
     Retrieves a LearningSource record from the database by its video_id.
@@ -308,4 +330,52 @@ def get_learning_source_by_video_id(db: Session, video_id: str) -> Optional[db_m
     Returns:
         The LearningSource object if found, otherwise None.
     """
-    return db.query(db_models.LearningSource).filter(db_models.LearningSource.video_id == video_id).first() 
+    return db.query(db_models.LearningSource).filter(db_models.LearningSource.video_id == video_id).first()
+
+def get_note_by_id(db: Session, note_id: str) -> Optional[db_models.GeneratedNote]:
+    """
+    Retrieves a GeneratedNote record from the database by its note_id.
+
+    Args:
+        db: The SQLAlchemy database session.
+        note_id: The note_id of the GeneratedNote to retrieve.
+
+    Returns:
+        The GeneratedNote object if found, otherwise None.
+    """
+    return db.query(db_models.GeneratedNote).filter(db_models.GeneratedNote.note_id == note_id).first()
+
+def update_note(
+    db: Session, 
+    note_id: str, 
+    note_update_data: pydantic_models.NoteUpdate
+) -> Optional[db_models.GeneratedNote]:
+    """
+    Updates a generated note in the database.
+
+    Args:
+        db: The SQLAlchemy database session.
+        note_id: The ID of the note to update.
+        note_update_data: A Pydantic model containing the data to update the note with.
+                          Currently, this is expected to have `markdown_content`.
+
+    Returns:
+        The updated GeneratedNote object if found and updated, otherwise None.
+    """
+    db_note = get_note_by_id(db, note_id)
+    if db_note is None:
+        return None
+
+    # Update the markdown content
+    db_note.markdown_content = note_update_data.markdown_content
+    # Set the flag indicating user edit
+    db_note.is_user_edited = True
+    # The last_edited_at field should be updated automatically by `onupdate=func.now()`
+    # if the database and ORM model are configured correctly.
+    # If `onupdate` is not reliably working or not desired for some reason,
+    # you would explicitly set it here:
+    # db_note.last_edited_at = datetime.now() 
+
+    db.commit()
+    db.refresh(db_note)
+    return db_note

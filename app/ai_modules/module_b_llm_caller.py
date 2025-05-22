@@ -3,7 +3,7 @@ LLM Caller for AI Module B (Intelligent Markdown Note Generation)
 """
 import json
 import re
-from typing import Dict, Any, List
+from typing import Dict, Any, List, Optional # Added Optional
 import uuid # For potential noteId placeholder generation if needed, though DB will create final
 
 import google.generativeai as genai
@@ -11,7 +11,12 @@ import google.generativeai as genai
 from app.core.config import Settings
 from app.ai_modules.prompts_module_b import SYSTEM_PROMPT_B_V1_0
 
-async def invoke_module_b_llm(module_a1_output: Dict[str, Any], module_a2_output: Dict[str, Any], settings: Settings) -> Dict[str, Any]:
+async def invoke_module_b_llm(
+    module_a1_output: Dict[str, Any], 
+    module_a2_output: Dict[str, Any], 
+    settings: Settings,
+    learning_objectives: Optional[str] = None # Added learning_objectives
+) -> Dict[str, Any]:
     """
     Invokes the Gemini LLM for Module B to generate intelligent Markdown notes.
 
@@ -19,6 +24,7 @@ async def invoke_module_b_llm(module_a1_output: Dict[str, Any], module_a2_output
         module_a1_output: The dictionary result from the invoke_module_a1_llm call.
         module_a2_output: The dictionary result from the invoke_module_a2_llm call.
         settings: The application settings instance.
+        learning_objectives: Optional user-provided learning objectives.
 
     Returns:
         A dictionary containing the LLM's structured output for Module B.
@@ -37,8 +43,10 @@ async def invoke_module_b_llm(module_a1_output: Dict[str, Any], module_a2_output
         # Prepare the user message for Module B
         user_message_input_data = {
             "moduleA1Output": module_a1_output,
-            "moduleA2Output": module_a2_output
+            "moduleA2Output": module_a2_output,
         }
+        if learning_objectives: # Add learning_objectives if provided
+            user_message_input_data["userLearningObjectives"] = learning_objectives
 
         user_message_content = f"""
 Please process the following structured data, which includes the full transcript context from Module A.1 and the extracted key information from Module A.2. Use this data to generate an intelligent Markdown study note and its associated metadata, adhering strictly to your system prompt instructions (SYSTEM_PROMPT_B_V1_0).

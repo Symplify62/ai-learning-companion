@@ -1,0 +1,587 @@
+/* UnifiedInputForm.module.scss */
+
+.unifiedFormContainer {
+  max-width: 800px;
+  margin: 2rem auto;
+  padding: 2rem;
+  background-color: #f9f9f9;
+  border-radius: 8px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+}
+
+.pageTitle {
+  text-align: center;
+  color: #2c3e50;
+  margin-bottom: 2rem;
+  font-size: 2rem;
+  font-weight: 600;
+}
+
+.inputTypeSelector {
+  display: flex;
+  justify-content: center;
+  margin-bottom: 1.5rem;
+  padding: 0.5rem;
+  background-color: #e9ecef;
+  border-radius: 6px;
+
+  label {
+    margin: 0 1rem;
+    padding: 0.5rem 1rem;
+    cursor: pointer;
+    border-radius: 4px;
+    transition: background-color 0.2s ease-in-out;
+
+    input[type="radio"] {
+      margin-right: 0.5rem;
+      vertical-align: middle;
+    }
+
+    &:has(input[type="radio"]:checked) {
+      background-color: #007bff;
+      color: white;
+    }
+  }
+}
+
+
+.form {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+.formGroup {
+  display: flex;
+  flex-direction: column;
+  margin-bottom: 1rem;
+
+  label {
+    margin-bottom: 0.5rem;
+    font-weight: 500;
+    color: #34495e;
+  }
+}
+
+.formLabel {
+  display: block;
+  margin-bottom: 0.5rem;
+  font-weight: 500;
+  color: #34495e;
+}
+
+
+.formInput,
+.formTextarea,
+.formSelect {
+  padding: 0.75rem 1rem;
+  border: 1px solid #ced4da;
+  border-radius: 4px;
+  font-size: 1rem;
+  background-color: #fff;
+  transition: border-color 0.2s ease-in-out, box-shadow 0.2s ease-in-out;
+
+  &:focus {
+    outline: none;
+    border-color: #007bff;
+    box-shadow: 0 0 0 0.2rem rgba(0, 123, 255, 0.25);
+  }
+
+  &:disabled {
+    background-color: #e9ecef;
+    cursor: not-allowed;
+  }
+}
+
+.formTextarea {
+  min-height: 120px;
+  resize: vertical;
+  line-height: 1.5;
+}
+
+.buttonContainer {
+  display: flex;
+  justify-content: center;
+  margin-top: 1.5rem;
+}
+
+.submitButton {
+  padding: 0.8rem 2rem;
+  background-color: #007bff;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  font-size: 1.1rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background-color 0.2s ease-in-out, transform 0.1s ease;
+
+  &:hover:not(:disabled) {
+    background-color: #0056b3;
+    transform: translateY(-1px);
+  }
+
+  &:disabled {
+    background-color: #6c757d;
+    cursor: not-allowed;
+  }
+}
+
+/* Status and Error Messages */
+.statusDisplay, .statusLoading, .statusError {
+  margin-top: 1.5rem;
+  padding: 0.75rem 1rem;
+  border-radius: 4px;
+  text-align: center;
+}
+
+.statusLoading {
+  background-color: #e9ecef;
+  color: #495057;
+}
+.statusError {
+  background-color: #f8d7da;
+  color: #721c24;
+  border: 1px solid #f5c6cb;
+}
+.statusDisplay { /* For non-error, non-initial loading messages from getStatusDisplay */
+  background-color: #d1ecf1;
+  color: #0c5460;
+  border: 1px solid #bee5eb;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  &.error { // if getStatusDisplay returns isError = true
+    background-color: #f8d7da;
+    color: #721c24;
+    border: 1px solid #f5c6cb;
+  }
+}
+
+.statusIcon {
+  margin-right: 0.5rem;
+  height: 1.2em; /* Adjust size as needed */
+  width: 1.2em; /* Adjust size as needed */
+}
+
+@keyframes spinner {
+  to {transform: rotate(360deg);}
+}
+
+.spinner {
+  display: inline-block;
+  width: 1.2em;
+  height: 1.2em;
+  margin-left: 0.5rem; /* Space from text */
+  border: 3px solid rgba(0,0,0,.1);
+  border-radius: 50%;
+  border-top-color: #007bff; /* Spinner color, can match icon or text */
+  animation: spinner .6s linear infinite;
+  vertical-align: middle;
+}
+
+
+.resultsPanel {
+  margin-top: 2rem;
+  padding: 1.5rem;
+  border: 1px solid #dee2e6;
+  border-radius: 6px;
+  background-color: #fff;
+
+  h3, h4, h5 {
+    color: #343a40;
+    margin-top: 0;
+  }
+}
+
+.tabNav {
+  display: flex;
+  border-bottom: 2px solid #dee2e6;
+  margin-bottom: 1rem;
+}
+
+.tabButton {
+  padding: 0.75rem 1.25rem;
+  margin-right: 0.5rem;
+  border: none;
+  background-color: transparent;
+  cursor: pointer;
+  font-size: 1rem;
+  color: #495057;
+  border-bottom: 2px solid transparent; // For the active indicator
+  margin-bottom: -2px; // Align with the nav border
+  transition: color 0.2s ease-in-out, border-bottom-color 0.2s ease-in-out;
+
+  &:hover {
+    color: #007bff;
+  }
+
+  &.activeTab {
+    color: #007bff;
+    border-bottom-color: #007bff;
+    font-weight: 600;
+  }
+
+  &:disabled {
+    color: #adb5bd;
+    cursor: not-allowed;
+  }
+}
+
+.tabContent {
+  padding-top: 1rem;
+}
+
+.tabPanel {
+  /* Basic styling for tab panels, can be enhanced */
+  animation: fadeIn 0.3s ease-in-out;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+
+// Styles from TranscriptSubmitForm.module.scss that might be useful
+.editButton {
+    padding: 6px 12px;
+    font-size: 0.875rem;
+    color: #333;
+    background-color: #f0f0f0;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: background-color 0.2s;
+  
+    &:hover {
+      background-color: #e0e0e0;
+    }
+  
+    &:disabled {
+      background-color: #e9ecef;
+      cursor: not-allowed;
+      opacity: 0.7;
+    }
+}
+  
+.editedIndicator {
+    font-size: 0.8em;
+    color: #555555;
+    margin-top: 5px;
+    font-style: italic;
+}
+
+.emptyTabMessage {
+  padding: 2rem;
+  text-align: center;
+  font-size: 1rem;
+  color: #6c757d; // Muted text color
+  background-color: #f8f9fa; // Light background
+  border-radius: 4px;
+  margin-top: 1rem;
+}
+
+.resultsVideoTitle {
+  text-align: center; 
+  margin-bottom: 1.5rem; 
+  padding-bottom: 0.75rem; 
+  border-bottom: 1px solid #eee;
+  font-size: 1.8rem; // Larger for main title
+  font-weight: 600;
+  color: #333;
+}
+  
+.markdownContentArea {
+    padding: 1rem;
+    background-color: #fdfdfd;
+    border: 1px solid #eee;
+    border-radius: 6px;
+    line-height: 1.7;
+    max-height: 500px; /* Example max height */
+    overflow-y: auto;
+    margin-bottom: 1rem; /* Space before metadata boxes */
+  
+    h1, h2, h3, h4, h5, h6 { /* Markdown rendered headings */
+      margin-top: 1.2em; /* More space for markdown headings */
+      margin-bottom: 0.4em;
+      color: #1a2c47;
+    }
+    p { margin-bottom: 0.8em; line-height: 1.7; }
+    ul, ol { padding-left: 2em; margin-bottom: 1em; }
+    li { margin-bottom: 0.4em; }
+    blockquote { 
+      border-left: 4px solid #007bff; 
+      padding-left: 1em; 
+      margin-left: 0; 
+      font-style: italic; 
+      color: #555; 
+      background-color: #f8f9fa; 
+      padding-top: 0.5em; 
+      padding-bottom: 0.5em;
+    }
+    pre { 
+      background-color: #f0f0f0; 
+      padding: 1em; 
+      border-radius: 4px; 
+      overflow-x: auto; 
+      font-family: SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace; 
+      font-size: 0.9em; 
+    }
+    code { 
+      background-color: #f0f0f0; 
+      padding: 0.2em 0.4em; 
+      margin: 0; 
+      font-size: 0.9em; 
+      border-radius: 3px; 
+    }
+    pre code { 
+      background-color: transparent; 
+      padding: 0; 
+      margin: 0; 
+      font-size: inherit; 
+      border-radius: 0; 
+    }
+    table { 
+      border-collapse: collapse; 
+      margin-bottom: 1em; 
+      width: auto; 
+    }
+    th, td { 
+      border: 1px solid #ddd; 
+      padding: 0.5em 0.8em; 
+      text-align: left; 
+    }
+    th { 
+      background-color: #f2f2f2; 
+      font-weight: bold; 
+    }
+}
+  
+.metadataBox {
+    margin-bottom: 1rem;
+    padding: 0.75rem;
+    background-color: #f8f9fa; // Lighter than indigo for general metadata
+    border: 1px solid #e9ecef; // Softer border
+    border-radius: 4px;
+  
+    .metadataTitle {
+      font-size: 0.9rem;
+      font-weight: 600;
+      color: #495057; // Darker grey for titles
+      margin-bottom: 0.3rem;
+    }
+}
+  
+.conceptTag {
+    padding: 0.25rem 0.6rem;
+    background-color: #e0e0e0; // Neutral grey for tags
+    color: #333;
+    border-radius: 12px; // More pill-like
+    font-size: 0.75rem;
+    font-weight: 500;
+    margin-right: 0.3rem;
+    margin-bottom: 0.3rem;
+    display: inline-block;
+}
+  
+.metadataText {
+    font-size: 0.8rem;
+    color: #6c757d; // Standard muted text color
+    margin-bottom: 0.5rem;
+}
+
+/* Styles for Transcript and Knowledge Cues sections */
+.transcriptSection, .knowledgeCuesSection {
+    margin-top: 1.5rem;
+    padding-top: 1rem;
+    border-top: 1px solid #f0f0f0; // Subtle separator for sections within a tab
+    
+    .transcriptTitle, .cuesTitle { // Shared style for section titles inside tabs
+      font-size: 1.3rem; // Slightly larger for section titles
+      color: #343a40;
+      margin-bottom: 1rem;
+    }
+}
+  
+.cueList {
+    list-style-type: none;
+    padding-left: 0;
+}
+  
+.cueItem {
+    background-color: #f8f9fa;
+    border: 1px solid #dee2e6;
+    border-radius: 4px;
+    padding: 1rem;
+    margin-bottom: 0.8rem;
+  
+    p {
+      margin-top: 0;
+      margin-bottom: 0.5rem;
+      line-height: 1.5;
+    }
+  
+    strong {
+      color: #2c3e50;
+    }
+}
+  
+.cueDetails {
+    margin-top: 0.8rem; // Increased space
+    font-size: 0.85rem;
+    display: flex;
+    gap: 1rem;
+    align-items: center;
+}
+  
+.difficulty {
+    padding: 0.2rem 0.5rem;
+    border-radius: 3px;
+    font-weight: 500;
+    font-size: 0.75rem;
+  
+    &.difficultyLow {
+      background-color: #d4edda; // Light green
+      color: #155724;
+      border: 1px solid #c3e6cb;
+    }
+    &.difficultyMedium {
+      background-color: #fff3cd; // Light yellow
+      color: #856404;
+      border: 1px solid #ffeeba;
+    }
+    &.difficultyHigh {
+      background-color: #f8d7da; // Light red
+      color: #721c24;
+      border: 1px solid #f5c6cb;
+    }
+}
+  
+.sourceReference {
+    color: #6c757d;
+    font-style: italic;
+}
+
+.transcriptSegmentsArea {
+  max-height: 400px;
+  overflow-y: auto;
+  border: 1px solid #eee;
+  padding: 0.75rem;
+  border-radius: 4px;
+  background-color: #fdfdfd;
+}
+
+.transcriptSegment {
+  margin-bottom: 0.5rem;
+  padding-bottom: 0.5rem;
+  border-bottom: 1px dashed #e0e0e0;
+  line-height: 1.6;
+  &:last-child {
+    border-bottom: none;
+    margin-bottom: 0;
+  }
+}
+
+.timestamp {
+  color: #007bff;
+  margin-right: 0.75rem;
+  font-family: monospace;
+  font-size: 0.9em;
+  font-weight: 500;
+}
+
+.plainTranscriptArea {
+  white-space: pre-wrap;       /* CSS3 */
+  word-wrap: break-word;     /* Internet Explorer 5.5+ */
+  background-color: #f8f9fa;
+  padding: 1rem;
+  border-radius: 4px;
+  border: 1px solid #eee;
+  max-height: 400px;
+  overflow-y: auto;
+  font-family: monospace;
+  font-size: 0.9em;
+}
+  
+/* Placeholder for processing state in results panel */
+.processingPlaceholder {
+    padding: 2rem;
+    text-align: center;
+    font-size: 1.1rem;
+    color: #495057;
+    background-color: #e9ecef;
+    border-radius: 6px;
+}
+  
+.errorBox { /* For general errors in results panel */
+    margin-top: 1rem;
+    padding: 1rem;
+    border: 1px solid #f5c6cb; /* Red border */
+    border-radius: 4px;
+    background-color: #f8d7da; /* Light red background */
+    color: #721c24; /* Dark red text */
+  
+    .font-bold {
+      font-weight: bold;
+    }
+    p {
+      margin: 0.5rem 0;
+    }
+}
+
+.statusError { // Ensure this is distinct and clear
+  background-color: #ffebee; // Lighter red for background
+  color: #c62828; // Darker red for text
+  border: 1px solid #ef9a9a; // Softer red border
+  padding: 1rem; // More padding
+  margin-top: 1.5rem;
+  border-radius: 6px;
+  text-align: center;
+  font-size: 1rem; // Slightly larger for emphasis
+  box-shadow: 0 2px 4px rgba(0,0,0,0.1); // Subtle shadow
+}
+
+.statusInProgress { // For general in-progress statuses like 'processing_initiated' or active steps
+  background-color: #e6f7ff; // Light blue
+  color: #007bff;
+  border: 1px solid #91d5ff;
+}
+
+.statusSuccess { // For 'all_processing_complete'
+  background-color: #d4edda; // Light green
+  color: #155724;
+  border: 1px solid #c3e6cb;
+}
+
+.copyButton {
+  padding: 0.3rem 0.8rem;
+  font-size: 0.85rem;
+  color: #fff;
+  background-color: #007bff;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  margin-left: 10px; // Space it out from titles or content
+  transition: background-color 0.2s ease;
+  vertical-align: middle; // Align with text or titles
+
+  &:hover {
+    background-color: #0056b3;
+  }
+  &:disabled {
+    background-color: #6c757d;
+    opacity: 0.7;
+    cursor: not-allowed;
+  }
+}
+
+.copyFeedback {
+  display: inline-block;
+  margin-left: 10px;
+  font-size: 0.85rem;
+  color: #28a745; // Green for success
+  font-style: italic;
+}

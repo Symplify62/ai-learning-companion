@@ -1,28 +1,23 @@
 import './App.css';
-import TranscriptSubmitForm from './components/TranscriptSubmitForm';
-import BiliUrlSubmitForm from './components/BiliUrlSubmitForm';
+// import TranscriptSubmitForm from './components/TranscriptSubmitForm'; // Removed
+// import BiliUrlSubmitForm from './components/BiliUrlSubmitForm'; // Removed
+import UnifiedInputForm from './components/UnifiedInputForm'; // Added
 
 /**
  * @file App.jsx
  * @description Main application component.
  */
 function App() {
+  // State for results data, session ID, etc., could be lifted here in a future refactor
+  // For now, UnifiedInputForm manages its own submission lifecycle and basic results display.
+
   return (
     <div className="App">
       <header className="App-header">
-        <h1>AI Learning Companion</h1>
-        <p>MVP - Iteration 1: Core Flow Experience Loop</p>
+        {/* Title is now inside UnifiedInputForm, or could be here if UnifiedInputForm was purely for input */}
       </header>
       <main>
-        <section className="form-section">
-          <h2>Submit Raw Transcript Text</h2>
-          <TranscriptSubmitForm />
-        </section>
-        <hr style={{ margin: '2rem 0' }} />
-        <section className="form-section">
-          <h2>Submit Bilibili Video URL</h2>
-          <BiliUrlSubmitForm />
-        </section>
+        <UnifiedInputForm />
       </main>
       <footer style={{ textAlign: 'center', padding: '1rem 0', marginTop: '2rem', borderTop: '1px solid #eee'}}>
         <p>&copy; {new Date().getFullYear()} AI Learning Companion MVP</p>

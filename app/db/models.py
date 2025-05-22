@@ -53,6 +53,7 @@ class LearningSource(Base):
     total_duration_seconds = Column(Float, nullable=True)
     structured_transcript_segments_json = Column(Text, nullable=True)
     extracted_key_information_json = Column(Text, nullable=True)
+    learning_objectives = Column(Text, nullable=True) # Added for user's learning objectives
     created_at = Column(DateTime, default=func.now(), nullable=False)
     
     # 关系：多个学习资源关联到一个会话
@@ -77,10 +78,10 @@ class GeneratedNote(Base):
     session_id = Column(String(36), ForeignKey("learning_sessions.session_id"), nullable=False, index=True)
     user_id = Column(String(36), nullable=True, index=True)
     markdown_content = Column(Text, nullable=False)
-    is_user_edited = Column(Boolean, nullable=False, default=False)
+    is_user_edited = Column(Boolean, nullable=False, default=False) # Fulfills is_edited_by_user
     version = Column(String(10), nullable=False, default="1.0.0")
     created_at = Column(DateTime, default=func.now(), nullable=False)
-    last_modified_at = Column(String(50), default=lambda: datetime.datetime.now().isoformat())
+    last_edited_at = Column(DateTime, nullable=True, onupdate=func.now()) # Changed from last_modified_at
     estimated_reading_time_seconds = Column(Integer, nullable=True)
     key_concepts_mentioned = Column(JSON, nullable=True)
     summary_of_note = Column(Text, nullable=True)
@@ -95,7 +96,7 @@ class GeneratedNote(Base):
     knowledge_cues = relationship("KnowledgeCue", back_populates="note")
 
     def __repr__(self):
-        return f"<GeneratedNote(note_id='{self.note_id}', is_user_edited={self.is_user_edited})>"
+        return f"<GeneratedNote(note_id='{self.note_id}', is_user_edited={self.is_user_edited}, last_edited_at={self.last_edited_at})>"
 
 class KnowledgeCue(Base):
     """

@@ -1,5 +1,8 @@
 print("--- Python interpreter is reading app/main.py ---")
-from fastapi import FastAPI, Depends
+import logging # Added for logging
+import uuid # Added for error ID generation
+from fastapi import FastAPI, Depends, Request, HTTPException # Added Request, HTTPException
+from fastapi.responses import JSONResponse # Added JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy.orm import Session
 from sqlalchemy import text
@@ -71,3 +74,32 @@ def create_db_tables():
 @app.on_event("startup")
 async def on_startup():
     create_db_tables()
+
+# Configure basic logging
+logging.basicConfig(level=logging.INFO) # You can adjust the level
+logger = logging.getLogger(__name__)
+
+# Custom Exception Handler for general Python Exceptions
+@app.exception_handler(Exception)
+async def general_exception_handler(request: Request, exc: Exception):
+    error_id = uuid.uuid4()
+    # Log the full traceback for server-side debugging
+    logger.error(f"Unhandled exception (ID: {error_id}): {exc}", exc_info=True)
+    # Return a standardized JSON response to the client
+    return JSONResponse(
+        status_code=500,
+        content={"detail": f"An unexpected internal server error occurred. Please contact support with error ID: {error_id}"},
+    )
+
+# FastAPI's HTTPException handler is generally good, but if you want to ensure
+# it also logs the error or standardizes something further, you can override it.
+# For now, the default HTTPException behavior is often sufficient as it already returns JSON.
+# If specific formatting for HTTPException is needed:
+# @app.exception_handler(HTTPException)
+# async def http_exception_handler(request: Request, exc: HTTPException):
+#     logger.error(f"HTTPException: {exc.status_code} {exc.detail}")
+#     return JSONResponse(
+#         status_code=exc.status_code,
+#         content={"detail": exc.detail},
+#         headers=exc.headers,
+#     )

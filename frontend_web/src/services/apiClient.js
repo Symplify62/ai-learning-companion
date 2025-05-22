@@ -160,6 +160,28 @@ export async function createLearningSession(data) {
 }
 
 /**
+ * Updates an existing note with new content.
+ * @param {string} noteId - The ID of the note to update.
+ * @param {object} noteData - The data to update the note with, typically { markdown_content: "new content" }.
+ * @returns {Promise<object>} A promise that resolves with the updated note data.
+ * @throws {Error} Throws an error if the API request fails.
+ */
+export async function updateNote(noteId, noteData) {
+  if (!noteId) {
+    console.error("API Client Error: noteId is required for updateNote.");
+    throw new Error("noteId is required to update a note.");
+  }
+  if (!noteData || typeof noteData.markdown_content === 'undefined') {
+    console.error("API Client Error: noteData with markdown_content is required for updateNote.");
+    throw new Error("noteData with markdown_content is required.");
+  }
+  return request(`/notes/${noteId}`, { // Ensure this path matches the backend route
+    method: 'PUT',
+    body: noteData, 
+  });
+}
+
+/**
  * Fetches the current status of a specific learning session.
  * @param {string} sessionId - The ID of the learning session to query.
  * @returns {Promise<object>} A promise that resolves with the status API response

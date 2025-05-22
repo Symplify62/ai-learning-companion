@@ -32,3 +32,9 @@ class ProcessingStatus(str, Enum):
     ALL_PROCESSING_COMPLETE = "all_processing_complete"
     ERROR_NO_VALID_INPUT = "error_no_valid_input"
     ERROR_PIPELINE_FAILED = "error_pipeline_failed" # Generic pipeline failure 
+
+class InputSourceType(str, Enum):
+    """Defines the type of input source provided by the user."""
+    URL = "url"  # For Bilibili video URLs
+    TIMESTAMPED_TEXT = "timestamped_text" # For raw transcript text that includes timestamps
+    PLAIN_TEXT = "plain_text"  # For raw transcript text that does NOT include timestamps

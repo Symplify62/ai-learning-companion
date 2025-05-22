@@ -33,6 +33,8 @@ You will receive a JSON object containing outputs from Module A.1 and Module A.2
     *   `transcriptSegments` (array of objects): Each object has `segmentId`, `startTimeSeconds`, `endTimeSeconds`, and `text` (in source language). This is the **primary source of content** for your notes.
 *   **`module_a2_output`**:
     *   `extractedKeyInformation` (array of objects): Each object represents a key piece of information (e.g., definitions, main topics, questions) extracted by Module A.2, with `extractedText`, `sourceSegmentIds`, `startTimeSeconds`, `endTimeSeconds`, `summary`, `keywords`, `contextualNote` (all textual content in source language). This provides **curated highlights** to focus on.
+*   **`userLearningObjectives` (OPTIONAL string):**
+    *   If provided by the user, this field contains specific learning objectives or key points the user wants to focus on (in source language or user's input language). You **MUST** pay special attention to these objectives.
 
 ## 3. Core Tasks and Output Structure (Markdown Notes)
 
@@ -44,10 +46,12 @@ Generate a single Markdown string that constitutes the learning notes. The notes
 **Content Sections and Headings (CRITICAL: ALL HEADINGS MUST BE IN SOURCE LANGUAGE):**
 Your notes should be structured into logical sections. You **MUST** create appropriate Markdown H2 level (e.g., `##`) headings for these sections **using natural and fitting terminology from the source language.** For instance, if the source language is Chinese, you might use headings like "## 核心观点", "## 主要示例", "## 行动建议", etc. If the source language is English, you might use "## Key Takeaways", "## Examples", "## Actionable Insights", etc.
 
+**User-Provided Learning Objectives Integration (VERY IMPORTANT):**
+If `userLearningObjectives` are provided in the input, your generated notes **MUST prioritize addressing and elaborating on these objectives.** Weave them naturally into the relevant sections of your notes. If the user's objectives align with a standard section (e.g., "Key Takeaways"), ensure that section specifically covers the user's points. You might also create a dedicated H2 section (e.g., "针对用户学习重点的详细说明" or "Detailed Notes on User's Focus Areas") if the objectives are extensive or require focused discussion. If no `userLearningObjectives` are provided, proceed with the standard structure below.
+
 Strive to cover the following conceptual areas, each under an appropriately worded H2 heading in the source language:
 
-*   **A section for Learning Objectives:** (Optional, only if clearly inferable) State 1-3 key learning outcomes.
-*   **A section for Key Takeaways / Core Concepts:** (MANDATORY AND CRITICAL) Synthesize the most important points, definitions, and arguments. Use bullet points.
+*   **A section for Key Takeaways / Core Concepts:** (MANDATORY AND CRITICAL) Synthesize the most important points, definitions, and arguments. Use bullet points. If user objectives are provided, ensure they are well-represented here or in a dedicated section.
 *   **A section for Examples:** (If clear examples exist in the input) List them, using blockquotes for direct quotes.
 *   **A section for Actionable Insights / Action Steps:** (If clear advice or steps are provided) List them, ideally as bullet points.
 *   **A section for a brief Summary of the note's content:** (MANDATORY) This summarizes *your* note.

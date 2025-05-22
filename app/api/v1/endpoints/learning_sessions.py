@@ -13,7 +13,8 @@ from app.models.data_models import (
     NoteWithCues,
     FinalResultsPayload,
     GeneratedNoteRead,
-    KnowledgeCueRead
+    KnowledgeCueRead,
+    NoteUpdate # Added for note updates
 )
 from app.db.database import get_db
 from app.db import crud
@@ -39,18 +40,12 @@ async def create_learning_session(
      @param settings 配置设置
      @return LearningSessionResponse 新创建的学习会话信息
     """
-    # Validate that either bilibili_video_url or rawTranscriptText is provided
-    if not session_input.bilibili_video_url and not session_input.rawTranscriptText:
-        raise HTTPException(
-            status_code=422,
-            detail="Either 'bilibili_video_url' or 'rawTranscriptText' must be provided."
-        )
-    # Validate that not both are provided simultaneously (optional, but good practice)
-    if session_input.bilibili_video_url and session_input.rawTranscriptText:
-        raise HTTPException(
-            status_code=422,
-            detail="Provide either 'bilibili_video_url' or 'rawTranscriptText', but not both."
-        )
+    # The LearningSessionInput model's root_validator now handles these checks.
+    # try:
+    #     # Example: Access validated source_type (it's guaranteed to be set by the validator)
+    #     print(f"Validated source_type: {session_input.source_type}")
+    # except ValueError as e: # Should be caught by FastAPI if Pydantic validation fails
+    #     raise HTTPException(status_code=422, detail=str(e))
 
     try:
         # 步骤1: 在数据库中创建新的学习会话记录
@@ -76,7 +71,8 @@ async def create_learning_session(
                 session_id=db_session.session_id,
                 settings=settings,
                 video_id=db_source.video_id,
-                learning_session_input=session_input 
+                learning_session_input=session_input, # This now contains the validated source_type
+                learning_objectives=session_input.learning_objectives
             )
         
         # 返回响应
